@@ -5,27 +5,27 @@
 #include <QSqlQuery>
 #include <QSqlQueryModel>
 
-class Client
-{
-private:
-    //int idClient;
-    QString nomClient;
-    QString typeClient;
-    QString secteurClient;
-    QString telephoneClient;
-    QString emailClient;
-    QString adresseClient;
+class Client {
 
-public:
-    // Constructeurs
-    Client() {}  // Constructeur par défaut
-    Client(/*int idClient,*/ QString nomClient, QString type, QString secteur, QString telephone, QString email, QString adresse);
+    private:
+        int idClient;
+        QString nomClient, typeClient, secteurClient, telephoneClient, emailClient, adresseClient;
+        QString date_creation; // Ajoute cette ligne
+
+
+    public:
+        Client();  // Déclaration du constructeur par défaut
+        Client(int, QString, QString, QString, QString, QString, QString, QString);  // Autre constructeur
+
+        bool modifier(int id, QString nom, QString type, QString secteur, QString tel, QString email, QString adresse);
+
+
 
 
 
 
     // Getters
-    //int getIdClient() { return idClient; }
+    int getIdClient() { return idClient; }
     QString getNomClient() { return nomClient; }
     QString getTypeClient() { return typeClient; }
     QString getSecteurClient() { return secteurClient; }
@@ -34,7 +34,7 @@ public:
     QString getAdresseClient() { return adresseClient; }
 
     // Setters
-    //void setIdClient(int id) { idClient = id; }
+    void setIdClient(int id) { idClient = id; }
     void setNomClient(QString nom) { nomClient = nom; }
     void setTypeClient(QString type) { typeClient = type; }
     void setSecteurClient(QString secteur) { secteurClient = secteur; }

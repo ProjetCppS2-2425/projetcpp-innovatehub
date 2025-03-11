@@ -1251,7 +1251,7 @@ public:
         comboBox->setStyleSheet(QString::fromUtf8("font: 10pt \"Arial\";"));
         tableViewAFFICHELIST = new QTableView(groupBoxLISTCLIENT);
         tableViewAFFICHELIST->setObjectName("tableViewAFFICHELIST");
-        tableViewAFFICHELIST->setGeometry(QRect(90, 90, 591, 281));
+        tableViewAFFICHELIST->setGeometry(QRect(40, 120, 711, 291));
         pushButtonAFFICHERCLIENT = new QPushButton(groupBoxLISTCLIENT);
         pushButtonAFFICHERCLIENT->setObjectName("pushButtonAFFICHERCLIENT");
         pushButtonAFFICHERCLIENT->setGeometry(QRect(750, 40, 141, 61));
@@ -1891,7 +1891,7 @@ public:
         stackedWidget_2->setCurrentIndex(2);
         tabWidget->setCurrentIndex(0);
         tabWidget_2->setCurrentIndex(0);
-        tabWidgetCLIENT->setCurrentIndex(0);
+        tabWidgetCLIENT->setCurrentIndex(1);
         tabWidget_3->setCurrentIndex(0);
         tabWidget_4->setCurrentIndex(0);
 

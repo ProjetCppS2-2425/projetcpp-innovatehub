@@ -5,13 +5,14 @@
 
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
+    : QMainWindow(parent), ui(new Ui::MainWindow), Etmp()  // Ajoute `Etmp()`
 {
     ui->setupUi(this);  // Initialise l'interface graphique
 
-    // Appeler la méthode afficher() pour charger les données dès l'ouverture
+    // Charger les données dès l'ouverture
     ui->tableViewAFFICHELIST->setModel(Etmp.afficher());
 }
+
 
 
 MainWindow::~MainWindow()
@@ -48,16 +49,12 @@ void MainWindow::on_pushButtonSPPRIMERCLIENT_clicked()
 
 
 
-//void MainWindow::on_pushButtonSPPRIMERCLIENT_clicked()
-//{
-
-//}
 
 
 void MainWindow::on_pushButtonAJOUTERCLIENT_clicked()
 {
     // Récupération des informations saisies dans les champs
-   // int id = ui->lineEditID->text().toInt();  // Convertir l'ID en entier
+    int id = ui->lineEditID->text().toInt();  // Convertir l'ID en entier
     QString nom = ui->lineEditNOM->text();
     QString type = ui->lineEditTYPE->text();
     QString secteur = ui->lineEditSECTEUR->text();
@@ -66,8 +63,9 @@ void MainWindow::on_pushButtonAJOUTERCLIENT_clicked()
     QString adresse = ui->lineEditADRESSE->text();
 
 
-    // Instancier un objet de la classe Client
-    Client C(nom, type, secteur, telephone, email, adresse);
+    // Instancier un objet de la classe Client    hethi chat
+    QString date_creation = QDate::currentDate().toString("yyyy-MM-dd"); // Date automatique
+    Client C(id, nom, type, secteur, telephone, email, adresse, date_creation);
 
     // Insérer le client dans la base de données
     bool test = C.ajouter();
@@ -85,6 +83,34 @@ void MainWindow::on_pushButtonAJOUTERCLIENT_clicked()
                               QObject::tr("Ajout non effectué.\n"),
                               QMessageBox::Cancel);
     }
+
+}
+
+
+void MainWindow::on_pushButtonSPPRIMERCLIENT_2_clicked() //update
+{
+        int id = ui->lineEditID->text().toInt();
+        QString nom = ui->lineEditNOM->text();
+        QString type = ui->lineEditTYPE->text();
+        QString secteur = ui->lineEditSECTEUR->text();
+        QString telephone = ui->lineEditTALEPHONE->text();
+        QString email = ui->lineEditEMAIL->text();
+        QString adresse = ui->lineEditADRESSE->text();
+
+        Client C;
+        bool test = C.modifier(id, nom, type, secteur, telephone, email, adresse);
+
+        if (test) {
+            QMessageBox::information(nullptr, QObject::tr("OK"),
+                                     QObject::tr("Modification effectuée.\n"), QMessageBox::Ok);
+
+            // Mettre à jour l'affichage
+            ui->tableViewAFFICHELIST->setModel(C.afficher());
+        } else {
+            QMessageBox::critical(nullptr, QObject::tr("Not OK"),
+                                  QObject::tr("Modification non effectuée.\n"), QMessageBox::Cancel);
+        }
+
 
 }
 

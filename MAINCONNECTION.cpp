@@ -8,6 +8,11 @@ int main(int argc, char *argv[])
     MainWindow w;
     Connection c;
     bool test=c.createconnect();
+    //
+    if (!test) {
+        qDebug() << "La connexion à la base de données a échoué.";
+    }
+//
     if(test)
     {w.show();
         QMessageBox::information(nullptr, QObject::tr("database is open"),

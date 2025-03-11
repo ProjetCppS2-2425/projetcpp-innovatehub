@@ -31,6 +31,8 @@ private slots:
 
     void on_pushButtonSPPRIMERCLIENT_clicked();
 
+    void on_pushButtonSPPRIMERCLIENT_2_clicked();
+
 private:
     Ui::MainWindow *ui;
     Client Etmp; // Objet pour appeler afficher()

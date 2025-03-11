@@ -1,8 +1,11 @@
 #include "client.h"
+#include <QSqlError>  // ✅ Ajout de l'en-tête
 
+Client::Client() {
+    // Initialisation des attributs si nécessaire
+}
 // Constructeur
-Client::Client(int id, QString nom, QString type, QString secteur, QString tel, QString email, QString adresse)
-{
+Client::Client(int id, QString nom, QString type, QString secteur, QString tel, QString email, QString adresse, QString date_creation) {
     this->idClient = id;
     this->nomClient = nom;
     this->typeClient = type;
@@ -10,7 +13,10 @@ Client::Client(int id, QString nom, QString type, QString secteur, QString tel, 
     this->telephoneClient = tel;
     this->emailClient = email;
     this->adresseClient = adresse;
+    this->date_creation = date_creation; // Ajoute cette ligne
 }
+
+
 
 // Ajouter un client à la base de données
 bool Client::ajouter()
@@ -19,8 +25,11 @@ bool Client::ajouter()
     QString res = QString::number(idClient);
 
     // Préparation de la requête SQL pour insérer un client
-    query.prepare("INSERT INTO CLIENT (IDCLIENT, NOMCLIENT, TYPECLIENT, SECTEURCLIENT, TELEPHONECLIENT, EMAILCLIENT, ADRESSECLIENT, DATECRÉATION) "
-                  "VALUES (:id, :nom, :type, :secteur, :telephone, :email, :adresse, :dateCreation)");
+    //
+    query.prepare("INSERT INTO CLIENT (IDCLIENT, NOM, EMAIL, TELEPHONE, TYPE, ADRESSE, SECTEUR, DATECREATION) "
+                  "VALUES (:id, :nom, :email, :telephone, :type, :adresse, :secteur, :date_creation)");
+
+    query.bindValue(":date_creation", date_creation);
 
     // Création des variables liées
     query.bindValue(":id", res);
@@ -52,13 +61,30 @@ QSqlQueryModel* Client::afficher()
 }
 
 
-bool Client::supprimer(int id)
-{
+bool Client::supprimer(int id) {
     QSqlQuery query;
-    QString res = QString::number(id);
-
     query.prepare("DELETE FROM CLIENT WHERE IDCLIENT = :id");
-    query.bindValue(":id", res);
+    query.bindValue(":id", id);
 
-    return query.exec();
+    if (query.exec()) {
+        return true;  // Suppression réussie
+    } else {
+        return false; // Échec de suppression
+    }
+}
+
+bool Client::modifier(int id, QString nom, QString type, QString secteur, QString tel, QString email, QString adresse) {
+    QSqlQuery query;
+    query.prepare("UPDATE CLIENT SET NOM=:nom, TYPE=:type, SECTEUR=:secteur, TELEPHONE=:telephone, EMAIL=:email, ADRESSE=:adresse WHERE IDCLIENT=:id");
+
+    // Lier les valeurs aux variables de la requête
+    query.bindValue(":id", id);
+    query.bindValue(":nom", nom);
+    query.bindValue(":type", type);
+    query.bindValue(":secteur", secteur);
+    query.bindValue(":telephone", tel);
+    query.bindValue(":email", email);
+    query.bindValue(":adresse", adresse);
+
+    return query.exec();  // Retourne `true` si la requête a réussi, sinon `false`
 }
