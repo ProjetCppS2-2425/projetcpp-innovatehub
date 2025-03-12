@@ -1,16 +1,53 @@
 #include "connection.h"
 
-connection::connection() {db = QSqlDatabase::addDatabase("QODBC");}
+QSqlDatabase Connection::db = QSqlDatabase();
 
-bool connection::createconnection()
+bool Connection::createConnection()
+{
+    qDebug() << "Tentative de connexion à la base de données...";
+    
+    // Vérifier si une connexion existe déjà
+    if(db.isValid() && db.isOpen()) {
+        qDebug() << "Une connexion existe déjà";
+        return true;
+    }
 
-{bool test=false;
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("Source_Projet2A");//inserer le nom de la source de données
-    db.setUserName("transaction_admin");//inserer nom de l'utilisateur
-    db.setPassword("123456");//inserer mot de passe de cet utilisateur
+    // Liste des pilotes disponibles
+    qDebug() << "Pilotes disponibles:" << QSqlDatabase::drivers();
 
-    if (db.open()) test=true;
-     return  test;
+    db = QSqlDatabase::addDatabase("QODBC");
+    if (!db.isValid()) {
+        qDebug() << "Erreur: Le pilote QODBC n'est pas disponible";
+        return false;
+    }
+
+    // Configuration de la connexion
+    db.setDatabaseName("Source_Projet2A");
+    db.setUserName("syrine");
+    db.setPassword("esprit18");
+
+    // Tentative de connexion
+    if (!db.open()) {
+        qDebug() << "Erreur de connexion:";
+        qDebug() << "Type:" << db.lastError().type();
+        qDebug() << "Message:" << db.lastError().text();
+        qDebug() << "Driver Text:" << db.lastError().driverText();
+        qDebug() << "Database Text:" << db.lastError().databaseText();
+        return false;
+    }
+
+    qDebug() << "Connexion réussie à la base de données";
+    qDebug() << "Nom de la base:" << db.databaseName();
+    qDebug() << "Utilisateur:" << db.userName();
+    qDebug() << "Pilote:" << db.driverName();
+    
+    return true;
 }
-void connection::closeconection() { db.close() ;}
+
+void Connection::closeConnection()
+{
+    if (db.isOpen()) {
+        db.close();
+        qDebug() << "Connexion à la base de données fermée";
+    }
+}

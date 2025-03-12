@@ -2256,7 +2256,7 @@ font: 10pt &quot;Arial&quot;;</string>
 font: 10pt &quot;Arial&quot;;</string>
               </property>
               <property name="text">
-               <string> Statut de l’utilisateur</string>
+               <string> Statut de l'utilisateur</string>
               </property>
              </widget>
              <widget class="QPushButton" name="Bemploye_11">
@@ -2983,6 +2983,90 @@ font: 10pt &quot;Arial&quot;;</string>
                </property>
               </item>
              </widget>
+             <widget class="QComboBox" name="comboBox_2Transaction">
+              <property name="geometry">
+               <rect>
+                <x>10</x>
+                <y>290</y>
+                <width>181</width>
+                <height>28</height>
+               </rect>
+              </property>
+             </widget>
+             <widget class="QComboBox" name="comboBoxModePaiement">
+              <property name="geometry">
+               <rect>
+                <x>210</x>
+                <y>230</y>
+                <width>181</width>
+                <height>28</height>
+               </rect>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QComboBox {
+    background-color: white;
+    border: 2px solid #D1D5DB;
+    border-radius: 5px;
+    padding: 5px;
+}
+QComboBox:focus {
+    border: 2px solid #3B82F6;
+}</string>
+              </property>
+             </widget>
+             <widget class="QLabel" name="labelModePaiement">
+              <property name="geometry">
+               <rect>
+                <x>210</x>
+                <y>210</y>
+                <width>141</width>
+                <height>20</height>
+               </rect>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">color: rgb(255, 255, 255);</string>
+              </property>
+              <property name="text">
+               <string>Mode de paiement</string>
+              </property>
+             </widget>
+             <widget class="QComboBox" name="comboBoxClient">
+              <property name="geometry">
+               <rect>
+                <x>210</x>
+                <y>170</y>
+                <width>181</width>
+                <height>28</height>
+               </rect>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QComboBox {
+    background-color: white;
+    border: 2px solid #D1D5DB;
+    border-radius: 5px;
+    padding: 5px;
+}
+QComboBox:focus {
+    border: 2px solid #3B82F6;
+}</string>
+              </property>
+             </widget>
+             <widget class="QLabel" name="labelClient">
+              <property name="geometry">
+               <rect>
+                <x>210</x>
+                <y>150</y>
+                <width>141</width>
+                <height>20</height>
+               </rect>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">color: rgb(255, 255, 255);</string>
+              </property>
+              <property name="text">
+               <string>Client</string>
+              </property>
+             </widget>
             </widget>
            </widget>
            <widget class="QWidget" name="tab_3client">
@@ -3079,7 +3163,7 @@ selection-background-color: rgb(255, 255, 255);</string>
                <rect>
                 <x>20</x>
                 <y>40</y>
-                <width>211</width>
+                <width>401</width>
                 <height>391</height>
                </rect>
               </property>
@@ -3097,7 +3181,7 @@ selection-background-color: rgb(255, 255, 255);</string>
                </property>
                <property name="styleSheet">
                 <string notr="true">QLineEdit, QComboBox {
-    background-color: white;
+
     border: 2px solid #D1D5DB;
     border-radius: 5px;
     padding: 5px;
@@ -3120,7 +3204,7 @@ QLineEdit:focus, QComboBox:focus {
                </property>
                <property name="styleSheet">
                 <string notr="true">QLineEdit, QComboBox {
-    background-color: white;
+  
     border: 2px solid #D1D5DB;
     border-radius: 5px;
     padding: 5px;
@@ -3182,6 +3266,29 @@ QLineEdit:focus, QComboBox:focus {
                </property>
                <property name="text">
                 <string>Type de paiment</string>
+               </property>
+              </widget>
+              <widget class="QLabel" name="labelPartenaire">
+               <property name="geometry">
+                <rect>
+                 <x>10</x>
+                 <y>270</y>
+                 <width>141</width>
+                 <height>20</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>Partenaire</string>
+               </property>
+              </widget>
+              <widget class="QComboBox" name="comboBoxPartenaire">
+               <property name="geometry">
+                <rect>
+                 <x>10</x>
+                 <y>230</y>
+                 <width>181</width>
+                 <height>28</height>
+                </rect>
                </property>
               </widget>
               <widget class="QPushButton" name="pushButton_1Transaction">
@@ -3313,19 +3420,73 @@ QLineEdit:focus, QComboBox:focus {
                 </property>
                </item>
               </widget>
+              <widget class="QLabel" name="label_40">
+               <property name="geometry">
+                <rect>
+                 <x>210</x>
+                 <y>30</y>
+                 <width>141</width>
+                 <height>20</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>Mode de payment</string>
+               </property>
+              </widget>
+              <widget class="QComboBox" name="comboBox_modepaiment">
+               <property name="geometry">
+                <rect>
+                 <x>220</x>
+                 <y>60</y>
+                 <width>161</width>
+                 <height>28</height>
+                </rect>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Virement</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Espece</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Chaque</string>
+                </property>
+               </item>
+              </widget>
+              <zorder>comboBoxPartenaire</zorder>
+              <zorder>lineEdit1Transaction</zorder>
+              <zorder>lineEdit_3Transaction</zorder>
+              <zorder>label1Transaction</zorder>
+              <zorder>label_2Transaction</zorder>
+              <zorder>label_3Transaction</zorder>
+              <zorder>label_4Transaction</zorder>
+              <zorder>labelPartenaire</zorder>
+              <zorder>pushButton_1Transaction</zorder>
+              <zorder>pushButton_2Transaction</zorder>
+              <zorder>label_5Transaction</zorder>
+              <zorder>dateEditTransaction</zorder>
+              <zorder>comboBox1Transaction</zorder>
+              <zorder>comboBox_2Transaction</zorder>
+              <zorder>label_40</zorder>
+              <zorder>comboBox_modepaiment</zorder>
              </widget>
              <widget class="QLineEdit" name="lineEdit_5Transaction">
               <property name="geometry">
                <rect>
-                <x>290</x>
-                <y>90</y>
+                <x>440</x>
+                <y>80</y>
                 <width>131</width>
                 <height>28</height>
                </rect>
               </property>
               <property name="styleSheet">
                <string notr="true">QLineEdit {
-    background-color: #F5F5F5;
+
     border-radius: 8px;
     padding: 8px;
     border: 1px solid #B0BEC5;
@@ -3337,27 +3498,14 @@ QLineEdit:focus, QComboBox:focus {
              <widget class="QPushButton" name="pushButton_3Transaction">
               <property name="geometry">
                <rect>
-                <x>430</x>
-                <y>80</y>
-                <width>161</width>
+                <x>580</x>
+                <y>70</y>
+                <width>141</width>
                 <height>41</height>
                </rect>
               </property>
               <property name="styleSheet">
-               <string notr="true">QPushButton {
-    background: linear-gradient(to right, #00B8D4, #3F51B5);
-    border-radius: 12px;
-    padding: 10px 20px;
-    color: white;
-    font-weight: bold;
-    border: none;
-}
-QPushButton:hover {
-    background: linear-gradient(to right, #00B8D4, #1E88E5);
-    transform: scale(1.05);
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-}
-</string>
+               <string notr="true"/>
               </property>
               <property name="text">
                <string>Rechercher</string>
@@ -3366,8 +3514,8 @@ QPushButton:hover {
              <widget class="QLabel" name="label_6Transaction">
               <property name="geometry">
                <rect>
-                <x>590</x>
-                <y>90</y>
+                <x>730</x>
+                <y>80</y>
                 <width>63</width>
                 <height>20</height>
                </rect>
@@ -3395,15 +3543,15 @@ QPushButton:hover {
              <widget class="QComboBox" name="comboBox_3Transaction">
               <property name="geometry">
                <rect>
-                <x>670</x>
-                <y>90</y>
+                <x>840</x>
+                <y>80</y>
                 <width>111</width>
                 <height>28</height>
                </rect>
               </property>
               <property name="styleSheet">
                <string notr="true">QLineEdit, QComboBox {
-    background-color: white;
+  
     border: 2px solid #D1D5DB;
     border-radius: 5px;
     padding: 5px;
@@ -3428,12 +3576,17 @@ QLineEdit:focus, QComboBox:focus {
                 <string>Type</string>
                </property>
               </item>
+              <item>
+               <property name="text">
+                <string>Statut</string>
+               </property>
+              </item>
              </widget>
              <widget class="QPushButton" name="pushButton_4Transaction">
               <property name="geometry">
                <rect>
-                <x>790</x>
-                <y>80</y>
+                <x>960</x>
+                <y>70</y>
                 <width>81</width>
                 <height>41</height>
                </rect>
@@ -3456,26 +3609,10 @@ QPushButton:hover {
                <string>Trier</string>
               </property>
              </widget>
-             <widget class="QPushButton" name="pushButton_8_Transaction">
-              <property name="geometry">
-               <rect>
-                <x>310</x>
-                <y>400</y>
-                <width>101</width>
-                <height>29</height>
-               </rect>
-              </property>
-              <property name="text">
-               <string>Modifier</string>
-              </property>
-              <property name="icon">
-               <iconset theme="QIcon::ThemeIcon::MailMessageNew"/>
-              </property>
-             </widget>
              <widget class="QPushButton" name="pushButton_9_Transaction">
               <property name="geometry">
                <rect>
-                <x>470</x>
+                <x>690</x>
                 <y>400</y>
                 <width>83</width>
                 <height>29</height>
@@ -3488,7 +3625,7 @@ QPushButton:hover {
              <widget class="QPushButton" name="pushButton_5">
               <property name="geometry">
                <rect>
-                <x>630</x>
+                <x>820</x>
                 <y>400</y>
                 <width>181</width>
                 <height>31</height>
@@ -3501,11 +3638,11 @@ QPushButton:hover {
                <iconset theme="QIcon::ThemeIcon::DocumentNew"/>
               </property>
              </widget>
-             <widget class="QTableWidget" name="tableWidgetAFFICHELIST_3">
+             <widget class="QTableWidget" name="tableViewAFFICHELIST_3">
               <property name="geometry">
                <rect>
-                <x>290</x>
-                <y>140</y>
+                <x>480</x>
+                <y>130</y>
                 <width>551</width>
                 <height>251</height>
                </rect>
@@ -3541,429 +3678,56 @@ gridline-color: rgb(46, 46, 93);</string>
                <enum>Qt::TextElideMode::ElideNone</enum>
               </property>
               <property name="columnCount">
-               <number>5</number>
+               <number>12</number>
               </property>
-              <row>
+              <column>
                <property name="text">
                 <string>ID</string>
                </property>
-              </row>
-              <row>
+              </column>
+              <column>
                <property name="text">
                 <string>Montant</string>
                </property>
-              </row>
-              <row>
+              </column>
+              <column>
                <property name="text">
                 <string>Date</string>
                </property>
-              </row>
-              <row>
+              </column>
+              <column>
                <property name="text">
                 <string>Payeur</string>
                </property>
-              </row>
-              <row>
+              </column>
+              <column>
                <property name="text">
                 <string>Type</string>
                </property>
-              </row>
-              <row>
+              </column>
+              <column>
                <property name="text">
-                <string>Statut</string>
+                <string>New Column</string>
                </property>
-              </row>
+              </column>
+              <column>
+               <property name="text">
+                <string>Mode </string>
+               </property>
+              </column>
               <column/>
               <column/>
               <column/>
               <column/>
               <column/>
-             </widget>
-            </widget>
-           </widget>
-           <widget class="QWidget" name="tab_7">
-            <attribute name="title">
-             <string>Modification</string>
-            </attribute>
-            <widget class="QGroupBox" name="groupBoxTransaction_3">
-             <property name="geometry">
-              <rect>
-               <x>210</x>
-               <y>0</y>
-               <width>621</width>
-               <height>401</height>
-              </rect>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">background-color: rgb(0, 0, 53);
-color: rgb(255, 255, 255);
-font: 16pt &quot;Arial&quot;;
-selection-background-color: rgb(255, 255, 255);</string>
-             </property>
-             <property name="title">
-              <string>Modifier une Transaction</string>
-             </property>
-             <widget class="QLineEdit" name="lineEdit6Transaction">
-              <property name="geometry">
-               <rect>
-                <x>340</x>
-                <y>50</y>
-                <width>181</width>
-                <height>28</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">QLineEdit, QComboBox {
-    background-color: white;
-    border: 2px solid #D1D5DB;
-    border-radius: 5px;
-    padding: 5px;
-}
-QLineEdit:focus, QComboBox:focus {
-    border: 2px solid #3B82F6;
-}
-
-</string>
-              </property>
-             </widget>
-             <widget class="QLineEdit" name="lineEdit_7Transaction">
-              <property name="geometry">
-               <rect>
-                <x>340</x>
-                <y>180</y>
-                <width>181</width>
-                <height>28</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">QLineEdit, QComboBox {
-    background-color: white;
-    border: 2px solid #D1D5DB;
-    border-radius: 5px;
-    padding: 5px;
-}
-QLineEdit:focus, QComboBox:focus {
-    border: 2px solid #3B82F6;
-}
-
-</string>
-              </property>
-             </widget>
-             <widget class="QLabel" name="label7Transaction">
-              <property name="geometry">
-               <rect>
-                <x>130</x>
-                <y>50</y>
-                <width>63</width>
-                <height>20</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <property name="text">
-               <string>ID :</string>
-              </property>
-             </widget>
-             <widget class="QLabel" name="label_9Transaction">
-              <property name="geometry">
-               <rect>
-                <x>130</x>
-                <y>140</y>
-                <width>63</width>
-                <height>20</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <property name="text">
-               <string>Date :</string>
-              </property>
-             </widget>
-             <widget class="QLabel" name="label_10Transaction">
-              <property name="geometry">
-               <rect>
-                <x>130</x>
-                <y>180</y>
-                <width>121</width>
-                <height>20</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <property name="text">
-               <string>Nom du payeur :</string>
-              </property>
-             </widget>
-             <widget class="QLabel" name="label_11Transaction">
-              <property name="geometry">
-               <rect>
-                <x>130</x>
-                <y>230</y>
-                <width>141</width>
-                <height>20</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <property name="text">
-               <string>Type de paiment</string>
-              </property>
-             </widget>
-             <widget class="QPushButton" name="pushButton_6Transaction">
-              <property name="geometry">
-               <rect>
-                <x>180</x>
-                <y>350</y>
-                <width>91</width>
-                <height>31</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;
-</string>
-              </property>
-              <property name="text">
-               <string>Annuler</string>
-              </property>
-              <property name="icon">
-               <iconset theme="QIcon::ThemeIcon::EditClear"/>
-              </property>
-             </widget>
-             <widget class="QPushButton" name="pushButton_7Transaction">
-              <property name="geometry">
-               <rect>
-                <x>330</x>
-                <y>350</y>
-                <width>121</width>
-                <height>31</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <property name="text">
-               <string>Enregistrer</string>
-              </property>
-              <property name="icon">
-               <iconset theme="QIcon::ThemeIcon::DocumentSaveAs"/>
-              </property>
-             </widget>
-             <widget class="QLabel" name="label_12Transaction">
-              <property name="geometry">
-               <rect>
-                <x>130</x>
-                <y>280</y>
-                <width>131</width>
-                <height>20</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <property name="text">
-               <string>Statut de Paiment</string>
-              </property>
-             </widget>
-             <widget class="QDateEdit" name="dateEdit2Transaction">
-              <property name="geometry">
-               <rect>
-                <x>340</x>
-                <y>140</y>
-                <width>181</width>
-                <height>29</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">
-color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;
-</string>
-              </property>
-             </widget>
-             <widget class="QComboBox" name="comboBox3Transaction">
-              <property name="geometry">
-               <rect>
-                <x>340</x>
-                <y>230</y>
-                <width>181</width>
-                <height>28</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <item>
-               <property name="text">
-                <string>Revenue</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Depense</string>
-               </property>
-              </item>
-             </widget>
-             <widget class="QComboBox" name="comboBox_4Transaction">
-              <property name="geometry">
-               <rect>
-                <x>340</x>
-                <y>280</y>
-                <width>181</width>
-                <height>28</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <item>
-               <property name="text">
-                <string>En attente</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Effectué</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Échoué</string>
-               </property>
-              </item>
-             </widget>
-             <widget class="QLabel" name="label8Transaction">
-              <property name="geometry">
-               <rect>
-                <x>130</x>
-                <y>100</y>
-                <width>71</width>
-                <height>20</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-              <property name="text">
-               <string>Montant :</string>
-              </property>
-             </widget>
-             <widget class="QDoubleSpinBox" name="doubleSpinBoxTransaction">
-              <property name="geometry">
-               <rect>
-                <x>340</x>
-                <y>100</y>
-                <width>181</width>
-                <height>29</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);
-font: 10pt &quot;Arial&quot;;</string>
-              </property>
-             </widget>
-            </widget>
-           </widget>
-           <widget class="QWidget" name="tab_11">
-            <attribute name="title">
-             <string>Suppression</string>
-            </attribute>
-            <widget class="QGroupBox" name="groupBox_12">
-             <property name="geometry">
-              <rect>
-               <x>270</x>
-               <y>60</y>
-               <width>611</width>
-               <height>261</height>
-              </rect>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">font:  &quot;Arial&quot;;</string>
-             </property>
-             <property name="title">
-              <string>Supprimer Une Transaction</string>
-             </property>
-             <widget class="QLineEdit" name="lineEdit_14">
-              <property name="geometry">
-               <rect>
-                <x>180</x>
-                <y>90</y>
-                <width>161</width>
-                <height>41</height>
-               </rect>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">QLineEdit {
-    background-color: #F5F5F5;
-    border-radius: 8px;
-    padding: 8px;
-    border: 1px solid #B0BEC5;
-    font-size: 14px;
-}</string>
-              </property>
-             </widget>
-             <widget class="QLabel" name="label_39">
-              <property name="geometry">
-               <rect>
-                <x>90</x>
-                <y>100</y>
-                <width>63</width>
-                <height>20</height>
-               </rect>
-              </property>
-              <property name="text">
-               <string>ID :</string>
-              </property>
-             </widget>
-             <widget class="QPushButton" name="pushButton_6">
-              <property name="geometry">
-               <rect>
-                <x>400</x>
-                <y>90</y>
-                <width>121</width>
-                <height>41</height>
-               </rect>
-              </property>
-              <property name="text">
-               <string>Rechercher</string>
-              </property>
-             </widget>
-             <widget class="QPushButton" name="pushButton_7">
-              <property name="geometry">
-               <rect>
-                <x>140</x>
-                <y>178</y>
-                <width>111</width>
-                <height>41</height>
-               </rect>
-              </property>
-              <property name="text">
-               <string>Annuler</string>
-              </property>
-              <property name="icon">
-               <iconset theme="QIcon::ThemeIcon::EditClear"/>
-              </property>
              </widget>
              <widget class="QPushButton" name="pushButton_8">
               <property name="geometry">
                <rect>
-                <x>350</x>
-                <y>180</y>
+                <x>540</x>
+                <y>400</y>
                 <width>101</width>
-                <height>41</height>
+                <height>31</height>
                </rect>
               </property>
               <property name="text">

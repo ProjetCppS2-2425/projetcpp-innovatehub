@@ -6,8 +6,8 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
-    connection c;
-    bool test=c.createconnection();
+    Connection c;
+    bool test=c.createConnection();
 
 
     QSqlDatabase db = QSqlDatabase::database();
