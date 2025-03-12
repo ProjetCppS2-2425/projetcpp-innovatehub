@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Supprimer_Transaction</class>
+ <widget class="QWidget" name="Supprimer_Transaction">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>573</width>
+    <height>275</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+background-color: rgb(22, 15, 58);</string>
+  </property>
+  <widget class="QGroupBox" name="groupBox_supprimer_Transaction">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>30</y>
+     <width>421</width>
+     <height>191</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Supprimer une Transaction</string>
+   </property>
+   <widget class="QLineEdit" name="lineEdit6Transaction">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>60</y>
+      <width>181</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QLineEdit, QComboBox {
+    background-color: white;
+    border: 2px solid #D1D5DB;
+    border-radius: 5px;
+    padding: 5px;
+}
+QLineEdit:focus, QComboBox:focus {
+    border: 2px solid #3B82F6;
+}
+
+</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_supprimer_Transaction">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>60</y>
+      <width>63</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>ID :</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_supprimer_Transaction">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>110</y>
+      <width>91</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">
+QPushButton {
+    border-image: linear-gradient(to bottom, #8B2BE2, #2196F3) 1; /* Purple to Blue */
+}
+
+
+</string>
+    </property>
+    <property name="text">
+     <string>Annuler</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_2_supprimer_Transaction">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>110</y>
+      <width>91</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">
+QPushButton {
+    border-image: linear-gradient(to bottom, #8B2BE2, #2196F3) 1; /* Purple to Blue */
+}
+
+</string>
+    </property>
+    <property name="text">
+     <string>supprimer</string>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
