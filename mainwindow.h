@@ -2,26 +2,32 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QString>
+#include <QDate>
 
-QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
-QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+private slots:
+    void on_btn_Valider_clicked();   // Déclaration du slot pour le bouton "Valider"
+    void on_btn_Annuler_clicked();   // Déclaration du slot pour le bouton "Annuler"
+
+void on_deleteButton_clicked();
+    void on_pushButtonAfficher_clicked();
+void on_modifierButton_clicked();
+    void on_tableWidgetEmployes_itemSelectionChanged();
 
 private:
     Ui::MainWindow *ui;
-private slots:
-    // Déclaration des slots pour les boutons
-    void on_btn_Valider_clicked();
-    void on_btn_Annuler_clicked();
 };
+
 #endif // MAINWINDOW_H
