@@ -39,7 +39,7 @@ private slots:
     // Fonction pour rechercher une transaction par référence
     void on_pushButtonRechercherTransaction_clicked();
 
-    void on_pushButton_9_Transaction_clicked();
+    void on_pushButton_5_clicked();
     
     // Nouvelles fonctions pour la recherche et le tri
     void on_pushButton_3Transaction_clicked();  // Rechercher par référence/nom payeur/statut
@@ -57,6 +57,12 @@ private slots:
     
     // Slot pour gérer le double-clic sur une ligne du tableau
     void on_tableViewAFFICHELIST_3_doubleClicked(const QModelIndex &index);
+    
+    // Nouvelles méthodes pour la gestion des transactions
+    void loadClientsAndPartenaires();
+    void onTransactionTypeChanged(int index);
+
+    void on_pushButton_9_Transaction_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -67,6 +73,9 @@ private:
     
     // Fonction pour valider le montant de la transaction en fonction de son type
     bool validateTransactionAmount(double montant, const QString &type);
+    
+    // Fonction pour valider une transaction
+    bool validateTransaction();
     
     // Fonction pour rechercher des transactions selon différents critères
     void searchTransactions(const QString &searchText);

@@ -1,8 +1,6 @@
-QT       += core gui
-QT       += charts
-QT       += core gui widgets
+QT       += core gui sql charts
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-QT       += sql
 
 CONFIG += c++17
 
@@ -11,15 +9,15 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    connection.cpp \
     main.cpp \
     mainwindow.cpp \
-    transaction.cpp
+    transaction.cpp \
+    connection.cpp
 
 HEADERS += \
-    connection.h \
     mainwindow.h \
-    transaction.h
+    transaction.h \
+    connection.h
 
 FORMS += \
     mainwindow.ui

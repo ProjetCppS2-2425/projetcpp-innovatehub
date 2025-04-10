@@ -25,6 +25,21 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QSqlQueryModel>
+#include <QRegularExpressionValidator>
+#include <QFileDialog>
+#include <QTextStream>
+#include <QSqlTableModel>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QTemporaryDir>
+#include <QDateTime>
+#include <QBarSeries>
+#include <QBarSet>
+#include <QChartView>
+#include <QChart>
+#include <QBarCategoryAxis>
+#include <QValueAxis>
+#include <QPieSeries>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -66,6 +81,9 @@ MainWindow::MainWindow(QWidget *parent)
     // Connecter les boutons de transaction
     connectTransactionButtons();
     
+    // Connecter le bouton de statistiques
+    connect(ui->pushButton_9_Transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_9_Transaction_clicked);
+    
     // Rafraîchir la table des transactions
     refreshTransactionTable();
     
@@ -74,138 +92,177 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::setupTransactionValidators()
 {
-    qDebug() << "\n=== Début de la configuration des validateurs ===";
-
-    // Validateur pour le montant (nombres positifs avec 2 décimales)
+    qDebug() << "\n=== Configuration des validateurs de transaction ===";
+    
+    // Configuration du validateur pour le montant
     QDoubleValidator* montantValidator = new QDoubleValidator(0.0, 999999999.99, 2, this);
     montantValidator->setNotation(QDoubleValidator::StandardNotation);
     ui->lineEdit1Transaction->setValidator(montantValidator);
     
-    // Pas besoin de valider lineEditMontantModif s'il n'existe pas
-    // ui->lineEditMontantModif->setValidator(montantValidator);
+    // Chargement initial des clients et partenaires
+    loadClientsAndPartenaires();
+    
+    // Connexion du signal de changement de type de transaction
+    connect(ui->comboBox1Transaction, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainWindow::onTransactionTypeChanged);
+            
+    // Configuration initiale de la visibilité
+    onTransactionTypeChanged(ui->comboBox1Transaction->currentIndex());
+}
 
-    // Configuration des combobox de statut et type
-    ui->comboBox_2Transaction->clear();
-    ui->comboBox_2Transaction->addItems({"En attente", "Validé", "Annulé"});
+void MainWindow::loadClientsAndPartenaires()
+{
+    qDebug() << "\n=== Chargement des clients et partenaires ===";
     
-    ui->comboBox1Transaction->clear();
-    ui->comboBox1Transaction->addItems({"Vente", "Achat", "Remboursement"});
-
-    // Configuration du mode de paiement
-    ui->comboBox_modepaiment->clear();
-    ui->comboBox_modepaiment->addItems({"Especes", "Cheque", "Virement"});
+    // Vider les combobox
+    ui->comboBox_8_tran_client->clear();
+    ui->comboBox_7_tran_part->clear();
     
-    // Pas besoin de configurer les combobox dans le groupBoxTransaction_3 s'ils n'existent pas
-    /*
-    ui->comboBoxStatutModif->clear();
-    ui->comboBoxStatutModif->addItems({"En attente", "Validé", "Annulé"});
+    // Ajouter l'option "Sélectionner..."
+    ui->comboBox_8_tran_client->addItem("Sélectionner un client...", QVariant(0));
+    ui->comboBox_7_tran_part->addItem("Sélectionner un partenaire...", QVariant(0));
     
-    ui->comboBoxTypeModif->clear();
-    ui->comboBoxTypeModif->addItems({"Vente", "Achat", "Remboursement"});
-    
-    ui->comboBoxModeModif->clear();
-    ui->comboBoxModeModif->addItems({"Especes", "Cheque", "Virement"});
-    
-    // Validateur pour les références (entiers positifs)
-    QIntValidator* refValidator = new QIntValidator(1, 999999, this);
-    ui->lineEditReferenceRecherche->setValidator(refValidator);
-    ui->lineEditReferenceSupprimer->setValidator(refValidator);
-    */
-
-    // Vérifier la connexion à la base de données
-    QSqlDatabase db = QSqlDatabase::database();
-    if (!db.isValid() || !db.isOpen()) {
-        qDebug() << "ERREUR: Base de données non connectée!";
-        qDebug() << "Valide:" << db.isValid();
-        qDebug() << "Ouverte:" << db.isOpen();
-        return;
-    }
-
-    // Contrôle de la date - Limiter la date à aujourd'hui et passé
-    ui->dateEditTransaction->setMaximumDate(QDate::currentDate());
-    ui->dateEditTransaction->setCalendarPopup(true); // Permet d'afficher un calendrier pour sélectionner la date
-    
-    // Charger la liste des partenaires avec une requête modifiée
-    QSqlQuery queryPartenaires;
-    qDebug() << "\nChargement des partenaires...";
-    QString queryPartenairesStr = "SELECT IDPARTENAIRE, NOMENTREPRISE FROM SYRINE.PARTENAIRE ORDER BY NOMENTREPRISE";
-    qDebug() << "Requête partenaires:" << queryPartenairesStr;
-    
-    if (!queryPartenaires.exec(queryPartenairesStr)) {
-        qDebug() << "ERREUR SQL lors du chargement des partenaires:";
-        qDebug() << "Error:" << queryPartenaires.lastError().text();
-        qDebug() << "Driver Text:" << queryPartenaires.lastError().driverText();
-        qDebug() << "Database Text:" << queryPartenaires.lastError().databaseText();
-    } else {
-        qDebug() << "Requête partenaires exécutée avec succès";
-        int count = 0;
-        ui->comboBoxPartenaire->clear();
-        ui->comboBoxPartenaire->addItem("Aucun partenaire", QVariant(0));
-        
-        while (queryPartenaires.next()) {
-            count++;
-            int id = queryPartenaires.value(0).toInt();
-            QString nom = queryPartenaires.value(1).toString();
-            ui->comboBoxPartenaire->addItem(nom, id);
-            qDebug() << "Partenaire ajouté:" << id << "-" << nom;
-        }
-        qDebug() << "Nombre de partenaires chargés:" << count;
-    }
-
-    // Charger la liste des clients
+    // Charger les clients
     QSqlQuery queryClients;
-    qDebug() << "\nChargement des clients...";
-    QString queryClientsStr = "SELECT IDCLIENT, NOM FROM SYRINE.CLIENT ORDER BY NOM";
-    qDebug() << "Requête clients:" << queryClientsStr;
-    
-    if (!queryClients.exec(queryClientsStr)) {
-        qDebug() << "ERREUR SQL lors du chargement des clients:";
-        qDebug() << "Error:" << queryClients.lastError().text();
-        qDebug() << "Driver Text:" << queryClients.lastError().driverText();
-        qDebug() << "Database Text:" << queryClients.lastError().databaseText();
-    } else {
-        qDebug() << "Requête clients exécutée avec succès";
-        int count = 0;
-        ui->comboBoxClient->clear();
-        ui->comboBoxClient->addItem("Aucun client", QVariant(0));
-        
+    if (queryClients.exec("SELECT IDCLIENT, NOM FROM SYRINE.CLIENT ORDER BY NOM")) {
         while (queryClients.next()) {
-            count++;
             int id = queryClients.value(0).toInt();
             QString nom = queryClients.value(1).toString();
-            ui->comboBoxClient->addItem(nom, id);
-            qDebug() << "Client ajouté:" << id << "-" << nom;
+            ui->comboBox_8_tran_client->addItem(nom, id);
         }
-        qDebug() << "Nombre de clients chargés:" << count;
+    } else {
+        qDebug() << "Erreur lors du chargement des clients:" << queryClients.lastError().text();
+    }
+    
+    // Charger les partenaires
+    QSqlQuery queryPartenaires;
+    if (queryPartenaires.exec("SELECT IDPARTENAIRE, NOMENTREPRISE FROM SYRINE.PARTENAIRE ORDER BY NOMENTREPRISE")) {
+        while (queryPartenaires.next()) {
+            int id = queryPartenaires.value(0).toInt();
+            QString nom = queryPartenaires.value(1).toString();
+            ui->comboBox_7_tran_part->addItem(nom, id);
+        }
+    } else {
+        qDebug() << "Erreur lors du chargement des partenaires:" << queryPartenaires.lastError().text();
+    }
+}
+
+void MainWindow::onTransactionTypeChanged(int index)
+{
+    qDebug() << "\n=== Changement du type de transaction ===";
+    
+    QString type = ui->comboBox1Transaction->currentText();
+    qDebug() << "Type sélectionné:" << type;
+    
+    // Réinitialiser les sélections
+    ui->comboBox_8_tran_client->setCurrentIndex(0);
+    ui->comboBox_7_tran_part->setCurrentIndex(0);
+    
+    // Gérer la visibilité et l'activation des combobox en fonction du type
+    if (type == "Vente") {
+        ui->comboBox_8_tran_client->setEnabled(true);
+        ui->comboBox_7_tran_part->setEnabled(false);
+        ui->labelClient->setStyleSheet("color: red;"); // Indiquer que c'est obligatoire
+        ui->labelPartenaire->setStyleSheet("");
+    } else if (type == "Achat") {
+        ui->comboBox_8_tran_client->setEnabled(false);
+        ui->comboBox_7_tran_part->setEnabled(true);
+        ui->labelClient->setStyleSheet("");
+        ui->labelPartenaire->setStyleSheet("color: red;"); // Indiquer que c'est obligatoire
+    } else {
+        // Pour les autres types (ex: Remboursement)
+        ui->comboBox_8_tran_client->setEnabled(true);
+        ui->comboBox_7_tran_part->setEnabled(true);
+        ui->labelClient->setStyleSheet("");
+        ui->labelPartenaire->setStyleSheet("");
+    }
+}
+
+bool MainWindow::validateTransaction()
+{
+    qDebug() << "\n=== Validation de la transaction ===";
+    
+    QString type = ui->comboBox1Transaction->currentText();
+    int clientId = ui->comboBox_8_tran_client->currentData().toInt();
+    int partenaireId = ui->comboBox_7_tran_part->currentData().toInt();
+    
+    // Vérifier que le montant n'est pas vide
+    if (ui->lineEdit1Transaction->text().isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Le montant est obligatoire.");
+        return false;
     }
 
-    // Vérification finale
-    qDebug() << "\nÉtat final des combobox:";
-    qDebug() << "Nombre d'éléments dans comboBoxClient:" << ui->comboBoxClient->count();
-    qDebug() << "Nombre d'éléments dans comboBoxPartenaire:" << ui->comboBoxPartenaire->count();
+    // Définir un validateur qui autorise uniquement les lettres alphabétiques et les espaces
+    QRegularExpressionValidator *validator = new QRegularExpressionValidator(QRegularExpression("^[A-Za-zÀ-ÖØ-öø-ÿ ]+$"), this);
+    ui->lineEdit_3Transaction->setValidator(validator);
 
-    // Connecter les signaux des combobox pour la sélection mutuelle exclusive
-    connect(ui->comboBoxClient, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int index) {
-            qDebug() << "\nSélection client changée:";
-            qDebug() << "Index:" << index;
-            qDebug() << "ID:" << ui->comboBoxClient->currentData().toInt();
-            qDebug() << "Texte:" << ui->comboBoxClient->currentText();
-            if (index > 0) { // Si un client est sélectionné
-                ui->comboBoxPartenaire->setCurrentIndex(0); // Désélectionner le partenaire
-            }
-        });
+    // Vérifier que la date n'est pas dans le futur
+    if (ui->dateEditTransaction->date() > QDate::currentDate()) {
+        QMessageBox::warning(this, "Erreur", "La date ne peut pas être dans le futur.");
+        return false;
+    }
+    
+    // Validation spécifique selon le type de transaction
+    if (type == "Vente" && clientId == 0) {
+        QMessageBox::warning(this, "Erreur", "Vous devez sélectionner un client pour une vente.");
+        return false;
+    } else if (type == "Achat" && partenaireId == 0) {
+        QMessageBox::warning(this, "Erreur", "Vous devez sélectionner un partenaire pour un achat.");
+        return false;
+    }
+    
+    // Validation du montant en fonction du type
+    double montant = ui->lineEdit1Transaction->text().toDouble();
+    if (type == "Vente" && montant <= 0) {
+        QMessageBox::warning(this, "Erreur", "Le montant d'une vente doit être positif.");
+        return false;
+    } else if (type == "Achat" && montant <= 0) {
+        QMessageBox::warning(this, "Erreur", "Le montant d'un achat doit être positif.");
+        return false;
+    }
+    
+    return true;
+}
 
-    connect(ui->comboBoxPartenaire, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int index) {
-            qDebug() << "\nSélection partenaire changée:";
-            qDebug() << "Index:" << index;
-            qDebug() << "ID:" << ui->comboBoxPartenaire->currentData().toInt();
-            qDebug() << "Texte:" << ui->comboBoxPartenaire->currentText();
-            if (index > 0) { // Si un partenaire est sélectionné
-                ui->comboBoxClient->setCurrentIndex(0); // Désélectionner le client
-            }
-        });
+void MainWindow::on_pushButton_2Transaction_clicked()
+{
+    qDebug() << "\n=== Ajout d'une nouvelle transaction ===";
+    
+    // Validation des entrées
+    if (!validateTransaction()) {
+        return;
+    }
+    
+    // Récupération des valeurs
+    double montant = ui->lineEdit1Transaction->text().toDouble();
+    QString modePaiement = ui->comboBox_modepaiment->currentText();
+    QDate date = ui->dateEditTransaction->date();
+    QString statut = ui->comboBox_2Transaction->currentText();
+    QString type = ui->comboBox1Transaction->currentText();
+    int clientId = ui->comboBox_8_tran_client->currentData().toInt();
+    int partenaireId = ui->comboBox_7_tran_part->currentData().toInt();
+    
+    // Création de la transaction
+    Transaction transaction(0, montant, modePaiement, date, statut, type, 0, clientId, partenaireId);
+    
+    // Ajout de la transaction
+    if (transaction.ajouter()) {
+        QMessageBox::information(this, "Succès", "Transaction ajoutée avec succès.");
+        
+        // Réinitialisation des champs
+        ui->lineEdit1Transaction->clear();
+        ui->dateEditTransaction->setDate(QDate::currentDate());
+        ui->comboBox_2Transaction->setCurrentIndex(0);
+        ui->comboBox1Transaction->setCurrentIndex(0);
+        ui->comboBox_modepaiment->setCurrentIndex(0);
+        ui->comboBox_8_tran_client->setCurrentIndex(0);
+        ui->comboBox_7_tran_part->setCurrentIndex(0);
+        
+        // Rafraîchir la table
+        refreshTransactionTable();
+    } else {
+        QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout: " + transaction.getLastError());
+    }
 }
 
 void MainWindow::showEmploye() {
@@ -239,85 +296,6 @@ bool MainWindow::validateTransactionAmount(double montant, const QString &type)
         return false;
     }
     return true;
-}
-
-void MainWindow::on_pushButton_2Transaction_clicked()
-{
-    qDebug() << "\n=== Début de l'ajout d'une transaction ===";
-    
-    // Validation des entrées
-    if (ui->lineEdit1Transaction->text().isEmpty()) {
-        qDebug() << "Erreur: Montant vide";
-        QMessageBox::warning(this, "Erreur", "Le montant est obligatoire");
-        return;
-    }
-
-    if (ui->dateEditTransaction->date() > QDate::currentDate()) {
-        qDebug() << "Erreur: Date future";
-        QMessageBox::warning(this, "Erreur", "La date ne peut pas être future");
-        return;
-    }
-
-    // Récupération des IDs client et partenaire (maintenant optionnels)
-    int clientId = ui->comboBoxClient->currentData().toInt();
-    int partenaireId = ui->comboBoxPartenaire->currentData().toInt();
-    
-    // Vérification du payeur (client ou partenaire)
-    // Pour les transactions de type "Vente" ou "Remboursement", un payeur est obligatoire
-    QString type = ui->comboBox1Transaction->currentText();
-    if ((type == "Vente" || type == "Remboursement") && clientId == 0 && partenaireId == 0) {
-        qDebug() << "Erreur: Aucun payeur sélectionné pour une " << type;
-        QMessageBox::warning(this, "Erreur", "Vous devez sélectionner un client ou un partenaire pour une transaction de type '" + type + "'");
-        return;
-    }
-    
-    // Configuration des valeurs
-    double montant = ui->lineEdit1Transaction->text().toDouble();
-    
-    // Validation du montant en fonction du type de transaction
-    if (!validateTransactionAmount(montant, type)) {
-        return;
-    }
-    
-    QDate date = ui->dateEditTransaction->date();
-    QString statut = ui->comboBox_2Transaction->currentText();
-    QString modePaiement = ui->comboBox_modepaiment->currentText();
-
-    qDebug() << "Données du payeur (optionnel):";
-    qDebug() << "- Client ID:" << clientId;
-    qDebug() << "- Partenaire ID:" << partenaireId;
-    
-    qDebug() << "Données de la transaction:";
-    qDebug() << "- Montant:" << montant;
-    qDebug() << "- Date:" << date.toString("yyyy-MM-dd");
-    qDebug() << "- Statut:" << statut;
-    qDebug() << "- Type:" << type;
-    qDebug() << "- Mode de paiement:" << modePaiement;
-    
-    // Création de la transaction
-    Transaction transaction(0, montant, modePaiement, date, statut, type, 0, clientId, partenaireId);
-    
-    // Ajout de la transaction
-    qDebug() << "Tentative d'ajout de la transaction...";
-    if (transaction.ajouter()) {
-        qDebug() << "Transaction ajoutée avec succès";
-        QMessageBox::information(this, "Succès", "Transaction ajoutée avec succès");
-
-        // Nettoyage des champs
-        ui->lineEdit1Transaction->clear();
-        ui->dateEditTransaction->setDate(QDate::currentDate());
-        ui->comboBox_2Transaction->setCurrentIndex(0);
-        ui->comboBox1Transaction->setCurrentIndex(0);
-        ui->comboBox_modepaiment->setCurrentIndex(0);
-        ui->comboBoxPartenaire->setCurrentIndex(0);
-        ui->comboBoxClient->setCurrentIndex(0);
-        
-        // Rafraîchir la table
-        refreshTransactionTable();
-    } else {
-        qDebug() << "Erreur lors de l'ajout de la transaction:" << transaction.getLastError();
-        QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout: " + transaction.getLastError());
-    }
 }
 
 void MainWindow::setupTableContextMenu()
@@ -485,27 +463,18 @@ void MainWindow::searchTransactions(const QString &searchText)
                       "FROM SYRINE.TRANSACTION t "
                       "LEFT JOIN SYRINE.CLIENT c ON t.IDCLIENT = c.IDCLIENT "
                       "LEFT JOIN SYRINE.PARTENAIRE p ON t.IDPARTENAIRE = p.IDPARTENAIRE "
-                      "WHERE t.REFERENCE = :reference OR "
-                      "c.NOM LIKE :nom OR "
-                      "p.NOMENTREPRISE LIKE :entreprise OR "
-                      "t.STATUTT LIKE :statut";
+                      "WHERE CAST(t.REFERENCE AS VARCHAR2(20)) LIKE :reference OR "
+                      "UPPER(c.NOM) LIKE UPPER(:nom) OR "
+                      "UPPER(p.NOMENTREPRISE) LIKE UPPER(:entreprise) OR "
+                      "UPPER(t.TYPEE) LIKE UPPER(:type)";
     
     query.prepare(queryStr);
     
-    // Vérifier si le terme de recherche est un nombre (référence)
-    bool isNumber;
-    int reference = searchText.toInt(&isNumber);
-    
-    if (isNumber) {
-        query.bindValue(":reference", reference);
-    } else {
-        query.bindValue(":reference", -1); // Valeur impossible pour éviter les correspondances
-    }
-    
-    // Recherche par nom ou statut (avec correspondance partielle)
+    // Recherche partielle pour tous les champs
+    query.bindValue(":reference", "%" + searchText + "%");
     query.bindValue(":nom", "%" + searchText + "%");
     query.bindValue(":entreprise", "%" + searchText + "%");
-    query.bindValue(":statut", "%" + searchText + "%");
+    query.bindValue(":type", "%" + searchText + "%");
     
     if (query.exec()) {
         int rowCount = 0;
@@ -520,29 +489,42 @@ void MainWindow::searchTransactions(const QString &searchText)
         while (query.next()) {
             ui->tableViewAFFICHELIST_3->insertRow(rowCount);
             
-            // Ajouter les données dans chaque colonne
-            for (int col = 0; col < 7; ++col) {
-                QTableWidgetItem *item = new QTableWidgetItem(query.value(col).toString());
-                ui->tableViewAFFICHELIST_3->setItem(rowCount, col, item);
-            }
+            // Récupérer les valeurs
+            QString reference = query.value(0).toString();
+            double montant = query.value(1).toDouble();
+            QString modePaiement = query.value(2).toString();
+            QDate date = query.value(3).toDate();
+            QString statut = query.value(4).toString();
+            QString type = query.value(5).toString();
+            QString payeur = query.value(6).toString();
+            
+            // Créer les items pour chaque colonne
+            QTableWidgetItem *refItem = new QTableWidgetItem(reference);
+            QTableWidgetItem *montantItem = new QTableWidgetItem(QString::number(montant, 'f', 2));
+            QTableWidgetItem *modePaiementItem = new QTableWidgetItem(modePaiement);
+            QTableWidgetItem *dateItem = new QTableWidgetItem(date.toString("dd/MM/yyyy"));
+            QTableWidgetItem *statutItem = new QTableWidgetItem(statut);
+            QTableWidgetItem *typeItem = new QTableWidgetItem(type);
+            QTableWidgetItem *payeurItem = new QTableWidgetItem(payeur);
+            
+            // Ajouter les items à la table
+            ui->tableViewAFFICHELIST_3->setItem(rowCount, 0, refItem);
+            ui->tableViewAFFICHELIST_3->setItem(rowCount, 1, montantItem);
+            ui->tableViewAFFICHELIST_3->setItem(rowCount, 2, modePaiementItem);
+            ui->tableViewAFFICHELIST_3->setItem(rowCount, 3, dateItem);
+            ui->tableViewAFFICHELIST_3->setItem(rowCount, 4, statutItem);
+            ui->tableViewAFFICHELIST_3->setItem(rowCount, 5, typeItem);
+            ui->tableViewAFFICHELIST_3->setItem(rowCount, 6, payeurItem);
             
             rowCount++;
         }
         
-        // Ajuster les colonnes
-        ui->tableViewAFFICHELIST_3->resizeColumnsToContents();
-        ui->tableViewAFFICHELIST_3->resizeRowsToContents();
-        
         if (rowCount == 0) {
-            QMessageBox::information(this, "Résultat", "Aucune transaction trouvée avec ce critère de recherche.");
-            // Rafraîchir la table pour afficher toutes les transactions
-            refreshTransactionTable();
-        } else {
-            QMessageBox::information(this, "Résultat", QString("%1 transaction(s) trouvée(s).").arg(rowCount));
+            QMessageBox::information(this, "Information", "Aucune transaction trouvée.");
         }
     } else {
-        qDebug() << "Erreur lors de la recherche:" << query.lastError().text();
-        QMessageBox::critical(this, "Erreur", "Erreur lors de la recherche: " + query.lastError().text());
+        qDebug() << "Erreur lors de l'exécution de la requête:" << query.lastError().text();
+        QMessageBox::critical(this, "Erreur", "Une erreur est survenue lors de la recherche.");
     }
 }
 
@@ -645,8 +627,8 @@ void MainWindow::connectTransactionButtons()
     
     // Boutons d'ajout et de modification
     connect(ui->pushButton_2Transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_2Transaction_clicked);
-    connect(ui->pushButton_9_Transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_8_Transaction_clicked);
-    
+    connect(ui->pushButton_5, &QPushButton::clicked, this, &MainWindow::on_pushButton_5_clicked);
+    connect(ui->pushButton_9_Transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_9_Transaction_clicked);
     // Bouton pour la suppression
     connect(ui->pushButton_8, &QPushButton::clicked, this, &MainWindow::on_pushButton_8_clicked);
     
@@ -657,17 +639,132 @@ void MainWindow::connectTransactionButtons()
     connect(ui->pushButton_3Transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_3Transaction_clicked);
     connect(ui->pushButton_4Transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_4Transaction_clicked);
     
+    // Connecter le lineEdit_5Transaction pour détecter les changements de texte
+    connect(ui->lineEdit_5Transaction, &QLineEdit::textChanged, this, [this](const QString &text) {
+        if (text.isEmpty()) {
+            refreshTransactionTable();
+        }
+    });
+    
     qDebug() << "Connexion des boutons terminée";
 }
 
-MainWindow::~MainWindow()
+void MainWindow::on_pushButton_5_clicked()
 {
-    delete ui;
-}
+    // Vérifier si la table est vide
+    if (ui->tableViewAFFICHELIST_3->model()->rowCount() == 0) {
+        QMessageBox::warning(this, "Export impossible", "Aucune donnée à exporter.");
+        return;
+    }
 
-void MainWindow::on_pushButton_9_Transaction_clicked()
-{
-    // Implémentation existante
+    // Obtenir le modèle de la table
+    QAbstractItemModel *model = ui->tableViewAFFICHELIST_3->model();
+
+    // Chemin du fichier fixe
+    QString fileName = QDir::homePath() + "/transactions_export.csv";
+
+    // Vérifier si le fichier existe déjà
+    bool fileExists = QFile::exists(fileName);
+
+    // Créer ou mettre à jour le fichier CSV
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::critical(this, "Erreur d'export",
+            "Impossible d'accéder au fichier CSV.");
+        return;
+    }
+
+    QTextStream out(&file);
+    out.setEncoding(QStringConverter::Utf8);
+
+    // Section 1: Transactions détaillées
+    out << "=== Transactions détaillées ===\n\n";
+    
+    // Écrire les en-têtes
+    QStringList headers;
+    for (int col = 0; col < model->columnCount(); ++col) {
+        headers << model->headerData(col, Qt::Horizontal).toString();
+    }
+    out << headers.join(",") << "\n";
+
+    // Écrire les données
+    for (int row = 0; row < model->rowCount(); ++row) {
+        QStringList rowData;
+        for (int col = 0; col < model->columnCount(); ++col) {
+            QModelIndex index = model->index(row, col);
+            QString data = model->data(index).toString();
+            
+            // Formater les nombres
+            bool ok;
+            double num = data.toDouble(&ok);
+            if (ok) {
+                data = QString::number(num, 'f', 2);
+            }
+            
+            // Formater les dates
+            QDate date = QDate::fromString(data, "yyyy-MM-dd");
+            if (date.isValid()) {
+                data = date.toString("dd/MM/yyyy");
+            }
+            
+            // Échapper les virgules et guillemets dans les données
+            if (data.contains(",") || data.contains("\"") || data.contains("\n")) {
+                data = "\"" + data.replace("\"", "\"\"") + "\"";
+            }
+            
+            rowData << data;
+        }
+        out << rowData.join(",") << "\n";
+    }
+
+    // Section 2: Statistiques mensuelles
+    out << "\n\n=== Statistiques mensuelles ===\n\n";
+    out << "Mois,Ventes,Achats\n";
+
+    QSqlQuery query;
+    query.prepare("SELECT TO_CHAR(DATEEE, 'YYYY-MM') as month, "
+                  "SUM(CASE WHEN TYPEE = 'Vente' THEN MONTANT ELSE 0 END) as ventes, "
+                  "SUM(CASE WHEN TYPEE = 'Achat' THEN MONTANT ELSE 0 END) as achats "
+                  "FROM SYRINE.TRANSACTION "
+                  "GROUP BY TO_CHAR(DATEEE, 'YYYY-MM') "
+                  "ORDER BY month");
+
+    if (query.exec()) {
+        while (query.next()) {
+            QStringList rowData;
+            rowData << query.value("month").toString();
+            rowData << QString::number(query.value("ventes").toDouble(), 'f', 2);
+            rowData << QString::number(query.value("achats").toDouble(), 'f', 2);
+            out << rowData.join(",") << "\n";
+        }
+    }
+
+    // Section 3: Distribution des types
+    out << "\n\n=== Distribution des types ===\n\n";
+    out << "Type,Nombre\n";
+
+    query.prepare("SELECT TYPEE, COUNT(*) as count "
+                  "FROM SYRINE.TRANSACTION "
+                  "GROUP BY TYPEE");
+
+    if (query.exec()) {
+        while (query.next()) {
+            QStringList rowData;
+            rowData << query.value("TYPEE").toString();
+            rowData << query.value("count").toString();
+            out << rowData.join(",") << "\n";
+        }
+    }
+
+    file.close();
+
+    // Afficher le message uniquement lors de la première création du fichier
+    if (!fileExists) {
+        QMessageBox::information(this, "Export réussi", "Données exportées vers " + fileName);
+    }
+    
+    // Ouvrir le fichier avec l'application par défaut
+    QDesktopServices::openUrl(QUrl::fromLocalFile(fileName));
 }
 
 void MainWindow::on_pushButtonRechercherTransaction_clicked()
@@ -704,17 +801,17 @@ void MainWindow::on_pushButtonRechercherTransaction_clicked()
         int partenaireId = query.value("IDPARTENAIRE").toInt();
         
         if (clientId > 0) {
-            int index = ui->comboBoxClient->findData(clientId);
-            if (index != -1) ui->comboBoxClient->setCurrentIndex(index);
+            int index = ui->comboBox_8_tran_client->findData(clientId);
+            if (index != -1) ui->comboBox_8_tran_client->setCurrentIndex(index);
         } else {
-            ui->comboBoxClient->setCurrentIndex(0);
+            ui->comboBox_8_tran_client->setCurrentIndex(0);
         }
         
         if (partenaireId > 0) {
-            int index = ui->comboBoxPartenaire->findData(partenaireId);
-            if (index != -1) ui->comboBoxPartenaire->setCurrentIndex(index);
+            int index = ui->comboBox_7_tran_part->findData(partenaireId);
+            if (index != -1) ui->comboBox_7_tran_part->setCurrentIndex(index);
         } else {
-            ui->comboBoxPartenaire->setCurrentIndex(0);
+            ui->comboBox_7_tran_part->setCurrentIndex(0);
         }
         
         QMessageBox::information(this, "Succès", "Transaction trouvée. Vous pouvez maintenant la modifier.");
@@ -726,8 +823,8 @@ void MainWindow::on_pushButtonRechercherTransaction_clicked()
         ui->comboBox_2Transaction->setCurrentIndex(0);
         ui->comboBox1Transaction->setCurrentIndex(0);
         ui->comboBox_modepaiment->setCurrentIndex(0);
-        ui->comboBoxClient->setCurrentIndex(0);
-        ui->comboBoxPartenaire->setCurrentIndex(0);
+        ui->comboBox_8_tran_client->setCurrentIndex(0);
+        ui->comboBox_7_tran_part->setCurrentIndex(0);
         currentTransactionReference = -1;
     }
 }
@@ -796,8 +893,8 @@ void MainWindow::on_pushButton_8_Transaction_clicked()
     }
 
     // Récupération des IDs client et partenaire
-    int clientId = ui->comboBoxClient->currentData().toInt();
-    int partenaireId = ui->comboBoxPartenaire->currentData().toInt();
+    int clientId = ui->comboBox_8_tran_client->currentData().toInt();
+    int partenaireId = ui->comboBox_7_tran_part->currentData().toInt();
     
     // Configuration des valeurs
     double montant = ui->lineEdit1Transaction->text().toDouble();
@@ -843,8 +940,8 @@ void MainWindow::on_pushButton_8_Transaction_clicked()
         ui->comboBox_2Transaction->setCurrentIndex(0);
         ui->comboBox1Transaction->setCurrentIndex(0);
         ui->comboBox_modepaiment->setCurrentIndex(0);
-        ui->comboBoxPartenaire->setCurrentIndex(0);
-        ui->comboBoxClient->setCurrentIndex(0);
+        ui->comboBox_8_tran_client->setCurrentIndex(0);
+        ui->comboBox_7_tran_part->setCurrentIndex(0);
         
         // Réinitialiser la référence
         currentTransactionReference = -1;
@@ -888,17 +985,17 @@ void MainWindow::on_pushButtonRechercherParReference_clicked()
         int partenaireId = transaction.getIdPartenaire();
         
         if (clientId > 0) {
-            int index = ui->comboBoxClient->findData(clientId);
-            if (index != -1) ui->comboBoxClient->setCurrentIndex(index);
+            int index = ui->comboBox_8_tran_client->findData(clientId);
+            if (index != -1) ui->comboBox_8_tran_client->setCurrentIndex(index);
         } else {
-            ui->comboBoxClient->setCurrentIndex(0);
+            ui->comboBox_8_tran_client->setCurrentIndex(0);
         }
         
         if (partenaireId > 0) {
-            int index = ui->comboBoxPartenaire->findData(partenaireId);
-            if (index != -1) ui->comboBoxPartenaire->setCurrentIndex(index);
+            int index = ui->comboBox_7_tran_part->findData(partenaireId);
+            if (index != -1) ui->comboBox_7_tran_part->setCurrentIndex(index);
         } else {
-            ui->comboBoxPartenaire->setCurrentIndex(0);
+            ui->comboBox_7_tran_part->setCurrentIndex(0);
         }
         
         // Afficher un message d'information
@@ -1100,8 +1197,8 @@ void MainWindow::on_pushButtonReinitialiser_clicked()
     ui->comboBox_2Transaction->setCurrentIndex(0);
     ui->comboBox1Transaction->setCurrentIndex(0);
     ui->comboBox_modepaiment->setCurrentIndex(0);
-    ui->comboBoxClient->setCurrentIndex(0);
-    ui->comboBoxPartenaire->setCurrentIndex(0);
+    ui->comboBox_8_tran_client->setCurrentIndex(0);
+    ui->comboBox_7_tran_part->setCurrentIndex(0);
     
     // Réinitialiser la référence courante
     currentTransactionReference = -1;
@@ -1158,7 +1255,7 @@ void MainWindow::on_tableViewAFFICHELIST_3_doubleClicked(const QModelIndex &inde
     
     // Type
     QComboBox* typeCombo = new QComboBox(&dialog);
-    typeCombo->addItems({"Vente", "Achat", "Remboursement"});
+    typeCombo->addItems({"Vente", "Achat", });
     formLayout->addRow("Type:", typeCombo);
     
     // Mode de paiement
@@ -1323,5 +1420,111 @@ void MainWindow::on_tableViewAFFICHELIST_3_doubleClicked(const QModelIndex &inde
     
     // Réinitialiser la référence
     currentTransactionReference = -1;
+}
+
+void MainWindow::on_pushButton_9_Transaction_clicked()
+{
+    // Create a new dialog to display the charts
+    QDialog *chartDialog = new QDialog(this);
+    chartDialog->setWindowTitle("Statistiques des transactions");
+    chartDialog->setMinimumSize(1200, 600);
+
+    // Create a horizontal layout for the charts
+    QHBoxLayout *mainLayout = new QHBoxLayout(chartDialog);
+
+    // Create the bar chart
+    QChart *barChart = new QChart();
+    barChart->setTitle("Statistiques par type de transaction");
+    barChart->setAnimationOptions(QChart::AllAnimations);
+
+    // Create series for transaction type statistics
+    QBarSeries *typeSeries = new QBarSeries();
+    QBarSet *ventesSet = new QBarSet("Ventes");
+    QBarSet *achatsSet = new QBarSet("Achats");
+    
+    // Query transaction type statistics
+    QSqlQuery query;
+    query.prepare("SELECT TYPEE, "
+                  "SUM(CASE WHEN TYPEE = 'Vente' THEN MONTANT ELSE 0 END) as ventes, "
+                  "SUM(CASE WHEN TYPEE = 'Achat' THEN MONTANT ELSE 0 END) as achats "
+                  "FROM SYRINE.TRANSACTION "
+                  "GROUP BY TYPEE "
+                  "ORDER BY TYPEE");
+
+    QStringList categories;
+    if (query.exec()) {
+        while (query.next()) {
+            categories << query.value("TYPEE").toString();
+            *ventesSet << query.value("ventes").toDouble();
+            *achatsSet << query.value("achats").toDouble();
+        }
+    }
+
+    typeSeries->append(ventesSet);
+    typeSeries->append(achatsSet);
+    barChart->addSeries(typeSeries);
+
+    // Create axis for type chart
+    QBarCategoryAxis *axisX = new QBarCategoryAxis();
+    axisX->append(categories);
+    barChart->addAxis(axisX, Qt::AlignBottom);
+    typeSeries->attachAxis(axisX);
+
+    QValueAxis *axisY = new QValueAxis();
+    barChart->addAxis(axisY, Qt::AlignLeft);
+    typeSeries->attachAxis(axisY);
+
+    // Create the pie chart
+    QChart *pieChart = new QChart();
+    pieChart->setTitle("Distribution des payeurs");
+    pieChart->setAnimationOptions(QChart::AllAnimations);
+
+    // Create pie chart for payer distribution
+    QPieSeries *payerSeries = new QPieSeries();
+    
+    // Get payer information from the table view
+    QMap<QString, int> payerCounts;
+    QAbstractItemModel *model = ui->tableViewAFFICHELIST_3->model();
+    
+    // Assuming the payer column is the last column (index 6)
+    int payerColumn = 6;
+    
+    for (int row = 0; row < model->rowCount(); ++row) {
+        QModelIndex index = model->index(row, payerColumn);
+        QString payer = model->data(index).toString();
+        if (payer.isEmpty()) {
+            payer = "Non spécifié";
+        }
+        payerCounts[payer]++;
+    }
+    
+    // Add data to the pie series
+    for (auto it = payerCounts.begin(); it != payerCounts.end(); ++it) {
+        payerSeries->append(it.key(), it.value());
+    }
+
+    // Add pie chart to the main chart
+    pieChart->addSeries(payerSeries);
+
+    // Create chart views
+    QChartView *barChartView = new QChartView(barChart);
+    barChartView->setRenderHint(QPainter::Antialiasing);
+    barChartView->setMinimumSize(600, 400);
+
+    QChartView *pieChartView = new QChartView(pieChart);
+    pieChartView->setRenderHint(QPainter::Antialiasing);
+    pieChartView->setMinimumSize(600, 400);
+
+    // Add chart views to the layout
+    mainLayout->addWidget(barChartView);
+    mainLayout->addWidget(pieChartView);
+
+    // Show the dialog
+    chartDialog->exec();
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
 }
 

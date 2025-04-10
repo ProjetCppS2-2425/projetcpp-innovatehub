@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     if(test)
     {
         w.show();
-        QMessageBox::information(nullptr, QObject::tr("database is open"),
+        /*QMessageBox::information(nullptr, QObject::tr("database is open"),
                                  QObject::tr("connection successful.\n"
                                              "Click Cancel to exit."), QMessageBox::Cancel);
 
@@ -31,6 +31,6 @@ int main(int argc, char *argv[])
                                           "Click Cancel to exit."), QMessageBox::Cancel);
 
 
-
+*/
     return a.exec();
-}
+    }}

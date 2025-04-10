@@ -40,7 +40,7 @@ bool Connection::createConnection()
     qDebug() << "Nom de la base:" << db.databaseName();
     qDebug() << "Utilisateur:" << db.userName();
     qDebug() << "Pilote:" << db.driverName();
-    
+
     return true;
 }
 
