@@ -1,0 +1,10 @@
+debug/connection.o
+debug/conseil.o
+debug/main.o
+debug/mainwindow.o
+debug/smtpclient.o
+debug/mimemessage.o
+debug/emailaddress.o
+debug/mimetext.o
+debug/mimeattachment.o
+debug/moc_mainwindow.o

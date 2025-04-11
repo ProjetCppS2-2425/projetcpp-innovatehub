@@ -1,0 +1,10 @@
+release/connection.o
+release/conseil.o
+release/main.o
+release/mainwindow.o
+release/smtpclient.o
+release/mimemessage.o
+release/emailaddress.o
+release/mimetext.o
+release/mimeattachment.o
+release/moc_mainwindow.o
