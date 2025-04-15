@@ -499,31 +499,7 @@ void MainWindow::on_pushButton_3Transaction_clicked()
     
     query.prepare(queryStr);
     
-    /* Recherche partielle pour tous les champs
-    query.bindValue(":reference", "%" + searchText + "%");
-    query.bindValue(":nom", "%" + searchText + "%");
-    query.bindValue(":entreprise", "%" + searchText + "%");
-    query.bindValue(":type", "%" + searchText + "%");
-    
-    if (query.exec()) {
-        int count = 0;
-        while (query.next()) {
-            searchResults += QString("Référence: %1\n").arg(query.value(0).toString());
-            searchResults += QString("Type: %1\n").arg(query.value(5).toString());
-            searchResults += QString("Montant: %1\n").arg(query.value(1).toString());
-            searchResults += QString("Date: %1\n").arg(query.value(3).toDate().toString("dd/MM/yyyy"));
-            searchResults += QString("Payeur: %1\n").arg(query.value(6).toString());
-            searchResults += "------------------------\n";
-            count++;
-        }
-        
-        if (count == 0) {
-            searchResults += "Aucun résultat trouvé.\n";
-        } else {
-            searchResults += QString("%1 transaction(s) trouvée(s).\n").arg(count);
-        }
-    }*/
-    
+
     // Display in textBrowser_transaction
     ui->textBrowser_transaction->setText(searchResults);
 }
@@ -1528,90 +1504,42 @@ void MainWindow::showTransactionCharts()
     barChart->setAnimationOptions(QChart::AllAnimations);
 
     // Define montant intervals
-    QVector<double> intervals = {0, 1000, 5000, 10000, 50000, 100000};
     QStringList categories;
-    for (int i = 0; i < intervals.size() - 1; i++) {
-        categories << QString("%1-%2").arg(intervals[i]).arg(intervals[i+1]);
-    }
+    categories << "0-1000" << "1000-5000" << "5000-10000" << "10000-50000" << "50000+";
     
     // Create series for each payeur type
     QBarSeries *series = new QBarSeries();
     QBarSet *clientSet = new QBarSet("Clients");
     QBarSet *partenaireSet = new QBarSet("Partenaires");
     
-    // Query data for clients
-    QSqlQuery clientQuery;
-    clientQuery.prepare("SELECT COUNT(*) as count, "
-                       "CASE "
-                       "WHEN MONTANT <= 1000 THEN '0-1000' "
-                       "WHEN MONTANT <= 5000 THEN '1000-5000' "
-                       "WHEN MONTANT <= 10000 THEN '5000-10000' "
-                       "WHEN MONTANT <= 50000 THEN '10000-50000' "
-                       "ELSE '50000-100000' "
-                       "END as interval "
-                       "FROM SYRINE.TRANSACTION WHERE IDCLIENT IS NOT NULL "
-                       "GROUP BY interval "
-                       "ORDER BY interval");
+    // Get all transaction data
+    QSqlQuery query;
+    query.exec("SELECT MONTANT, IDCLIENT, IDPARTENAIRE FROM SYRINE.TRANSACTION");
     
-    QMap<QString, int> clientCounts;
-    double totalClients = 0;
-    if (clientQuery.exec()) {
-        while (clientQuery.next()) {
-            int count = clientQuery.value("count").toInt();
-            clientCounts[clientQuery.value("interval").toString()] = count;
-            totalClients += count;
-        }
-    }
+    QVector<int> clientCounts(5, 0);    // Initialize counters for each interval
+    QVector<int> partenaireCounts(5, 0);
     
-    // Query data for partenaires
-    QSqlQuery partenaireQuery;
-    partenaireQuery.prepare("SELECT COUNT(*) as count, "
-                          "CASE "
-                          "WHEN MONTANT <= 1000 THEN '0-1000' "
-                          "WHEN MONTANT <= 5000 THEN '1000-5000' "
-                          "WHEN MONTANT <= 10000 THEN '5000-10000' "
-                          "WHEN MONTANT <= 50000 THEN '10000-50000' "
-                          "ELSE '50000-100000' "
-                          "END as interval "
-                          "FROM SYRINE.TRANSACTION WHERE IDPARTENAIRE IS NOT NULL "
-                          "GROUP BY interval "
-                          "ORDER BY interval");
-    
-    QMap<QString, int> partenaireCounts;
-    double totalPartenaires = 0;
-    if (partenaireQuery.exec()) {
-        while (partenaireQuery.next()) {
-            int count = partenaireQuery.value("count").toInt();
-            partenaireCounts[partenaireQuery.value("interval").toString()] = count;
-            totalPartenaires += count;
-        }
-    }
-    
-    // Add data to sets with percentages in the tooltips
-    for (const QString &interval : categories) {
-        int clientCount = clientCounts.value(interval, 0);
-        double clientPercent = totalClients > 0 ? (clientCount * 100.0 / totalClients) : 0;
+    while (query.next()) {
+        double montant = query.value("MONTANT").toDouble();
+        bool isClient = !query.value("IDCLIENT").isNull() && query.value("IDCLIENT").toInt() > 0;
+        bool isPartenaire = !query.value("IDPARTENAIRE").isNull() && query.value("IDPARTENAIRE").toInt() > 0;
         
-        int partenaireCount = partenaireCounts.value(interval, 0);
-        double partenairePercent = totalPartenaires > 0 ? (partenaireCount * 100.0 / totalPartenaires) : 0;
+        int interval = 0;
+        if (montant <= 1000) interval = 0;
+        else if (montant <= 5000) interval = 1;
+        else if (montant <= 10000) interval = 2;
+        else if (montant <= 50000) interval = 3;
+        else interval = 4;
         
-        *clientSet << clientCount;
-        *partenaireSet << partenaireCount;
+        if (isClient) clientCounts[interval]++;
+        if (isPartenaire) partenaireCounts[interval]++;
     }
     
-    // Format labels with percentages
-    connect(series, &QBarSeries::hovered, [=](bool status, int index, QBarSet *barset) {
-        if (status) {
-            double percent = 0;
-            if (barset == clientSet) {
-                percent = totalClients > 0 ? (barset->at(index) * 100.0 / totalClients) : 0;
-            } else if (barset == partenaireSet) {
-                percent = totalPartenaires > 0 ? (barset->at(index) * 100.0 / totalPartenaires) : 0;
-            }
-            QToolTip::showText(QCursor::pos(), 
-                QString("%1: %2 (%3%)").arg(barset->label()).arg(barset->at(index)).arg(percent, 0, 'f', 1));
-        }
-    });
+    // Add data to sets
+    for (int i = 0; i < 5; i++) {
+        *clientSet << clientCounts[i];
+        *partenaireSet << partenaireCounts[i];
+    }
     
     series->append(clientSet);
     series->append(partenaireSet);
@@ -1624,6 +1552,8 @@ void MainWindow::showTransactionCharts()
     series->attachAxis(axisX);
 
     QValueAxis *axisY = new QValueAxis();
+    axisY->setRange(0, qMax(clientCounts.count() ? *std::max_element(clientCounts.begin(), clientCounts.end()) : 10,
+                          partenaireCounts.count() ? *std::max_element(partenaireCounts.begin(), partenaireCounts.end()) : 10) * 1.1);
     barChart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
 
@@ -1636,40 +1566,39 @@ void MainWindow::showTransactionCharts()
     
     // Query data for achats/ventes
     QSqlQuery typeQuery;
-    typeQuery.prepare("SELECT TYPEE, COUNT(*) as count "
-                     "FROM SYRINE.TRANSACTION "
-                     "WHERE TYPEE IN ('Achat', 'Vente') "
-                     "GROUP BY TYPEE");
+    int achatCount = 0;
+    int venteCount = 0;
     
-    int totalTransactions = 0;
-    QMap<QString, int> typeCounts;
-    
-    if (typeQuery.exec()) {
-        while (typeQuery.next()) {
-            QString type = typeQuery.value("TYPEE").toString();
-            int count = typeQuery.value("count").toInt();
-            typeCounts[type] = count;
-            totalTransactions += count;
-        }
-        
-        // Add slices for Achat and Vente only
-        if (typeCounts.contains("Achat")) {
-            double percent = (typeCounts["Achat"] * 100.0) / totalTransactions;
-            QPieSlice *slice = pieSeries->append("Achat", typeCounts["Achat"]);
-            slice->setLabel(QString("Achat (%1%)").arg(QString::number(percent, 'f', 1)));
-        }
-        
-        if (typeCounts.contains("Vente")) {
-            double percent = (typeCounts["Vente"] * 100.0) / totalTransactions;
-            QPieSlice *slice = pieSeries->append("Vente", typeCounts["Vente"]);
-            slice->setLabel(QString("Vente (%1%)").arg(QString::number(percent, 'f', 1)));
-        }
+    // Count Achats
+    typeQuery.exec("SELECT COUNT(*) FROM SYRINE.TRANSACTION WHERE TYPEE = 'Achat'");
+    if (typeQuery.next()) {
+        achatCount = typeQuery.value(0).toInt();
     }
     
-    // Add percentage labels
-    for (QPieSlice *slice : pieSeries->slices()) {
-        slice->setLabelVisible(true);
-        slice->setLabelPosition(QPieSlice::LabelOutside);
+    // Count Ventes
+    typeQuery.exec("SELECT COUNT(*) FROM SYRINE.TRANSACTION WHERE TYPEE = 'Vente'");
+    if (typeQuery.next()) {
+        venteCount = typeQuery.value(0).toInt();
+    }
+    
+    // Total for percentage calculation
+    int total = achatCount + venteCount;
+    
+    // Add slices only if we have data
+    if (achatCount > 0) {
+        QPieSlice *achatSlice = pieSeries->append("Achat", achatCount);
+        achatSlice->setColor(QColor(231, 76, 60)); // Red
+        double achatPercent = total > 0 ? (achatCount * 100.0 / total) : 0;
+        achatSlice->setLabel(QString("Achat (%1%)").arg(achatPercent, 0, 'f', 1));
+        achatSlice->setLabelVisible(true);
+    }
+    
+    if (venteCount > 0) {
+        QPieSlice *venteSlice = pieSeries->append("Vente", venteCount);
+        venteSlice->setColor(QColor(46, 204, 113)); // Green
+        double ventePercent = total > 0 ? (venteCount * 100.0 / total) : 0;
+        venteSlice->setLabel(QString("Vente (%1%)").arg(ventePercent, 0, 'f', 1));
+        venteSlice->setLabelVisible(true);
     }
     
     pieChart->addSeries(pieSeries);
@@ -1689,7 +1618,6 @@ void MainWindow::showTransactionCharts()
 
     // Show the dialog
     chartDialog->exec();
-    // No need to manually delete - it will be deleted automatically because of Qt::WA_DeleteOnClose
 }
 
 MainWindow::~MainWindow()
