@@ -1,4 +1,4 @@
-QT       += core gui sql charts
+QT       += core gui sql charts network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -12,12 +12,18 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     transaction.cpp \
-    connection.cpp
+    connection.cpp \
+    chatbot_dialog.cpp \
+    openai_chatbot.cpp
 
 HEADERS += \
     mainwindow.h \
     transaction.h \
-    connection.h
+    connection.h \
+    apikeys.h \
+    regexp_compat.h \
+    chatbot_dialog.h \
+    openai_chatbot.h
 
 FORMS += \
     mainwindow.ui

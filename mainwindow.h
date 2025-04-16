@@ -7,6 +7,16 @@
 #include <QPixmap>
 #include <QIcon>
 #include "transaction.h"
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QDateTime>
+#include <QRegularExpression>
+#include <QTimer>
+#include "chatbot_dialog.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -65,26 +75,27 @@ private slots:
     void on_pushButton_9_Transaction_clicked();
     void showTransactionCharts();
 
+    // UI Button handlers
+    void on_pushButton_listePartenaires_clicked();
+    void on_pushButton_transaction_editClient_clicked();
+
+    void on_pushButton_6_transaction_clicked();
+    void setOpenAIApiKey(const QString &apiKey);
+
 private:
     Ui::MainWindow *ui;
     QMap<QPushButton*, int> pageMap;
     void setupTransactionValidators();
-    void refreshTransactionTable();  // Nouvelle fonction pour rafraîchir la table
-    int currentTransactionReference = -1;  // Référence de la transaction actuellement sélectionnée
+    void refreshTransactionTable();
+    int currentTransactionReference = -1;
     
-    // Fonction pour valider le montant de la transaction en fonction de son type
     bool validateTransactionAmount(double montant, const QString &type);
-    
-    // Fonction pour valider une transaction
     bool validateTransaction();
-    
-    // Fonction pour rechercher des transactions selon différents critères
     void searchTransactions(const QString &searchText);
-    
-    // Fonction pour trier les transactions selon différents critères
     void sortTransactions(const QString &criterion);
-    
-    // Nouvelles fonctions pour l'optimisation de l'interface
     void connectTransactionButtons();
+
+    QNetworkAccessManager *networkManager;
+    ChatbotDialog *chatbotDialog;
 };
 #endif // MAINWINDOW_H

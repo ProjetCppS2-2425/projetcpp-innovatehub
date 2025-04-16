@@ -42,10 +42,25 @@
 #include <QPieSeries>
 #include <QPieSlice>
 #include <QToolTip>
+#include <QScrollBar>
+#include <QSslSocket>
+#include <QUrlQuery>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QNetworkRequest>
+#include <QEventLoop>
+#include <random>
+#include <QRegularExpression>
+#include <QSettings>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , networkManager(new QNetworkAccessManager(this))
+    , chatbotDialog(nullptr)
 {
     ui->setupUi(this);
     
@@ -85,6 +100,20 @@ MainWindow::MainWindow(QWidget *parent)
     
     // Connecter le bouton de statistiques
     connect(ui->pushButton_9_Transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_9_Transaction_clicked);
+    
+    // Connecter le bouton du chatbot
+    connect(ui->pushButton_6_transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_6_transaction_clicked);
+    
+    // Configurer le chatbot
+    ui->textBrowser_transaction_2->setOpenLinks(false);
+    ui->textBrowser_transaction_2->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    ui->textBrowser_transaction_2->append("<b style='color: blue;'>Assistant:</b> Hello! I'm your AI assistant for transaction management. How can I help you today?");
+    
+    // Connecter Enter/Return key sur lineEdit_14 au même slot que le bouton
+    connect(ui->lineEdit_14, &QLineEdit::returnPressed, this, &MainWindow::on_pushButton_6_transaction_clicked);
+    
+    // Initialize network manager for AI chatbot
+    networkManager->setTransferTimeout(10000); // 10 seconds timeout
     
     // Rafraîchir la table des transactions
     refreshTransactionTable();
@@ -499,6 +528,34 @@ void MainWindow::on_pushButton_3Transaction_clicked()
     
     query.prepare(queryStr);
     
+    // Bind values for the search parameters
+    query.bindValue(":reference", "%" + searchText + "%");
+    query.bindValue(":nom", "%" + searchText + "%");
+    query.bindValue(":entreprise", "%" + searchText + "%");
+    query.bindValue(":type", "%" + searchText + "%");
+    
+    /* Remove the redeclaration and reuse the existing variable from line 474
+    // QString searchResults = "";
+    searchResults = ""; // Reset the existing variable
+    
+    if (query.exec()) {
+        searchResults = "Résultats de recherche pour: " + searchText + "\n\n";
+        while (query.next()) {
+            searchResults += "Référence: " + query.value(0).toString() + "\n";
+            searchResults += "Montant: " + query.value(1).toString() + "\n";
+            searchResults += "Mode paiement: " + query.value(2).toString() + "\n";
+            searchResults += "Date: " + query.value(3).toDate().toString("dd/MM/yyyy") + "\n";
+            searchResults += "Statut: " + query.value(4).toString() + "\n";
+            searchResults += "Type: " + query.value(5).toString() + "\n";
+            searchResults += "Payeur: " + query.value(6).toString() + "\n\n";
+        }
+        
+        if (searchResults == "Résultats de recherche pour: " + searchText + "\n\n") {
+            searchResults += "Aucun résultat trouvé.";
+        }
+    } else {
+        searchResults = "Erreur lors de la recherche: " + query.lastError().text();
+    }*/
 
     // Display in textBrowser_transaction
     ui->textBrowser_transaction->setText(searchResults);
@@ -1625,3 +1682,41 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::on_pushButton_listePartenaires_clicked()
+{
+    // Implementation for the partners list button
+    QMessageBox::information(this, "Partenaires", "Affichage de la liste des partenaires");
+    
+    // You can add actual implementation here to show partners
+    // For example:
+    // refreshPartenaireTable();
+}
+
+void MainWindow::on_pushButton_transaction_editClient_clicked()
+{
+    QMessageBox::information(this, "Edition client", "Édition du client dans la transaction");
+    
+    // You can add actual implementation here
+    // For example, display a dialog to edit the client info
+}
+
+void MainWindow::on_pushButton_6_transaction_clicked()
+{
+    if (!chatbotDialog) {
+        chatbotDialog = new ChatbotDialog(this);
+    }
+    chatbotDialog->show();
+    chatbotDialog->activateWindow();
+}
+
+void MainWindow::setOpenAIApiKey(const QString &apiKey)
+{
+    QSettings settings;
+    settings.setValue("openai/api_key", apiKey);
+    settings.sync();
+    
+    if (chatbotDialog) {
+        delete chatbotDialog;
+        chatbotDialog = nullptr;
+    }
+}
