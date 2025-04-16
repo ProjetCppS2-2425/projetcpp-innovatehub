@@ -56,6 +56,16 @@
 #include <QRegularExpression>
 #include <QSettings>
 
+#include <QtCharts/QHorizontalBarSeries>
+#include <QtCharts/QChartView>
+#include <QtCharts/QChart>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -1535,6 +1545,7 @@ void MainWindow::on_pushButton_9_Transaction_clicked()
     showTransactionCharts();
 }
 
+
 void MainWindow::showTransactionCharts()
 {
     QDialog *chartDialog = new QDialog(this);
@@ -1551,18 +1562,21 @@ void MainWindow::showTransactionCharts()
 
     // Define montant intervals
     QStringList categories;
-    categories << "0-1000" << "1000-5000" << "5000-10000" << "10000-50000" << "50000+";
+    categories << "Clients" << "Partenaires";
     
-    // Create series for each payeur type
+    // Create series for each interval
     QBarSeries *series = new QBarSeries();
-    QBarSet *clientSet = new QBarSet("Clients");
-    QBarSet *partenaireSet = new QBarSet("Partenaires");
+    QBarSet *interval0_1000 = new QBarSet("0-1000€");
+    QBarSet *interval1000_5000 = new QBarSet("1000-5000€");
+    QBarSet *interval5000_10000 = new QBarSet("5000-10000€");
+    QBarSet *interval10000_50000 = new QBarSet("10000-50000€");
+    QBarSet *interval50000plus = new QBarSet("50000€+");
     
     // Get all transaction data
     QSqlQuery query;
     query.exec("SELECT MONTANT, IDCLIENT, IDPARTENAIRE FROM SYRINE.TRANSACTION");
     
-    QVector<int> clientCounts(5, 0);    // Initialize counters for each interval
+    QVector<int> clientCounts(5, 0);    // Initialize counts for each interval
     QVector<int> partenaireCounts(5, 0);
     
     while (query.next()) {
@@ -1582,13 +1596,18 @@ void MainWindow::showTransactionCharts()
     }
     
     // Add data to sets
-    for (int i = 0; i < 5; i++) {
-        *clientSet << clientCounts[i];
-        *partenaireSet << partenaireCounts[i];
-    }
+    *interval0_1000 << clientCounts[0] << partenaireCounts[0];
+    *interval1000_5000 << clientCounts[1] << partenaireCounts[1];
+    *interval5000_10000 << clientCounts[2] << partenaireCounts[2];
+    *interval10000_50000 << clientCounts[3] << partenaireCounts[3];
+    *interval50000plus << clientCounts[4] << partenaireCounts[4];
     
-    series->append(clientSet);
-    series->append(partenaireSet);
+    series->append(interval0_1000);
+    series->append(interval1000_5000);
+    series->append(interval5000_10000);
+    series->append(interval10000_50000);
+    series->append(interval50000plus);
+    
     barChart->addSeries(series);
     
     // Add axis
@@ -1600,8 +1619,13 @@ void MainWindow::showTransactionCharts()
     QValueAxis *axisY = new QValueAxis();
     axisY->setRange(0, qMax(clientCounts.count() ? *std::max_element(clientCounts.begin(), clientCounts.end()) : 10,
                           partenaireCounts.count() ? *std::max_element(partenaireCounts.begin(), partenaireCounts.end()) : 10) * 1.1);
+    axisY->setTitleText("Nombre de transactions");
     barChart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
+
+    // Add legend
+    barChart->legend()->setVisible(true);
+    barChart->legend()->setAlignment(Qt::AlignRight);
 
     // Pie Chart - Achats/Ventes with percentages
     QChart *pieChart = new QChart();
