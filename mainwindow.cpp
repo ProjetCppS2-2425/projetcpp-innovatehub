@@ -101,17 +101,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Connecter le bouton de statistiques
     connect(ui->pushButton_9_Transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_9_Transaction_clicked);
     
-    // Connecter le bouton du chatbot
-    connect(ui->pushButton_6_transaction, &QPushButton::clicked, this, &MainWindow::on_pushButton_6_transaction_clicked);
-    
-    // Configurer le chatbot
-    ui->textBrowser_transaction_2->setOpenLinks(false);
-    ui->textBrowser_transaction_2->setTextInteractionFlags(Qt::TextBrowserInteraction);
-    ui->textBrowser_transaction_2->append("<b style='color: blue;'>Assistant:</b> Hello! I'm your AI assistant for transaction management. How can I help you today?");
-    
-    // Connecter Enter/Return key sur lineEdit_14 au même slot que le bouton
-    connect(ui->lineEdit_14, &QLineEdit::returnPressed, this, &MainWindow::on_pushButton_6_transaction_clicked);
-    
     // Initialize network manager for AI chatbot
     networkManager->setTransferTimeout(10000); // 10 seconds timeout
     

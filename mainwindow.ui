@@ -3782,44 +3782,6 @@ gridline-color: rgb(46, 46, 93);</string>
              </widget>
             </widget>
            </widget>
-           <widget class="QWidget" name="tab_7">
-            <attribute name="title">
-             <string>Page</string>
-            </attribute>
-            <widget class="QGroupBox" name="groupBox_12_transaction">
-             <property name="geometry">
-              <rect>
-               <x>120</x>
-               <y>0</y>
-               <width>801</width>
-               <height>421</height>
-              </rect>
-             </property>
-             <property name="title">
-              <string>Chatbot Assistant</string>
-             </property>
-             <widget class="QTextBrowser" name="textBrowser_transaction_2">
-              <property name="geometry">
-               <rect>
-                <x>10</x>
-                <y>40</y>
-                <width>771</width>
-                <height>291</height>
-               </rect>
-              </property>
-             </widget>
-             <widget class="QLineEdit" name="lineEdit_14">
-              <property name="geometry">
-               <rect>
-                <x>20</x>
-                <y>340</y>
-                <width>761</width>
-                <height>28</height>
-               </rect>
-              </property>
-             </widget>
-            </widget>
-           </widget>
           </widget>
          </widget>
          <widget class="QWidget" name="page_6">
