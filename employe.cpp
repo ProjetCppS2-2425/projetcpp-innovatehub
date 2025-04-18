@@ -14,12 +14,10 @@ Employe::Employe(int idE, QString prenom, QString nom, double salaire,
     this->idE = idE;
     this->prenom = prenom;
     this->nom = nom;
-
     this->salaire = salaire;
     this->poste = poste;
     this->cin = cin;
     this->email = email;
-
     this->numeroDeTelephone = numeroDeTelephone;
     this->motDePasse = motDePasse;
     this->gender = gender;  // Add this line to initialize gender
@@ -45,7 +43,8 @@ bool Employe::ajouter() {
     query.prepare("SELECT COUNT(*) FROM EMPLOYES WHERE CIN = :cin");
     query.bindValue(":cin", cin);
 
-    if (!query.exec()) {
+    if (!query.exec())
+    {
         // Passer nullptr comme parent ou utiliser un widget parent valide
         QMessageBox::warning(nullptr, "Erreur", "Erreur lors de la vérification du CIN dans la base de données !");
         return false;
@@ -96,7 +95,7 @@ QSqlQueryModel* Employe::afficher()
 
     // Création et préparation de la requête
     QSqlQuery query;
-    query.prepare("SELECT IDE, PRENOM, NOM, SALAIRE, POSTE, CIN, EMAIL, NUMERODETELEPHONE, GENDER FROM EMPLOYES ORDER BY IDE ASC");
+    query.prepare("SELECT  PRENOM, NOM, SALAIRE, POSTE, CIN, EMAIL, NUMERODETELEPHONE, GENDER FROM EMPLOYES ORDER BY IDE ASC");
 
     // Exécution de la requête
     if (!query.exec()) {
@@ -113,46 +112,43 @@ QSqlQueryModel* Employe::afficher()
 }
 
 
-bool Employe::supprimer(const QString &ide)
+bool Employe::supprimer(const QString &cin)
 {
-    // Prepare the DELETE SQL query
+    // Préparer la requête SQL DELETE en utilisant le CIN au lieu de l'IDE
     QSqlQuery query;
-    query.prepare("DELETE FROM EMPLOYES WHERE IDE = :ide");
-    query.bindValue(":ide", ide);  // Bind the IDE parameter
+    query.prepare("DELETE FROM EMPLOYES WHERE CIN = :cin");
+    query.bindValue(":cin", cin);  // Lier le CIN
 
-    // Execute the query
+    // Exécuter la requête
     if (query.exec()) {
-        qDebug() << "L'employé avec l'IDE" << ide << "a été supprimé.";
-        return true;  // Return true if the deletion was successful
+        qDebug() << "L'employé avec le CIN" << cin << "a été supprimé.";
+        return true;  // Succès
     } else {
         qDebug() << "Erreur lors de la suppression de l'employé :" << query.lastError().text();
-        return false;  // Return false if there was an error
+        return false;  // Échec
     }
 }
 
-bool Employe::modifier(const QString &ide, const QString &prenom, const QString &nom, const QString &salaire,
-                       const QString &poste, const QString &cin, const QString &email, const QString &telephone, const QString &gender) {
-    // Création de la requête SQL pour mettre à jour l'employé
+// Constructeur vide
+bool Employe::modifier(QString cin, QString prenom, QString nom, double salaire,
+                       QString poste, QString email, QString telephone, QString gender)
+{
     QSqlQuery query;
-    query.prepare("UPDATE EMPLOYES SET PRENOM = :prenom, NOM = :nom, SALAIRE = :salaire, POSTE = :poste, "
-                  "CIN = :cin, EMAIL = :email, NUMERODETELEPHONE = :telephone, GENDER = :gender WHERE IDE = :ide");
+    query.prepare("UPDATE EMPLOYES SET PRENOM = :prenom, NOM = :nom, SALAIRE = :salaire, "
+                  "POSTE = :poste, EMAIL = :email, NUMERODETELEPHONE = :telephone, "
+                  "GENDER = :gender WHERE CIN = :cin");
 
-    // Lier les paramètres à la requête
     query.bindValue(":prenom", prenom);
     query.bindValue(":nom", nom);
     query.bindValue(":salaire", salaire);
     query.bindValue(":poste", poste);
-    query.bindValue(":cin", cin);
     query.bindValue(":email", email);
     query.bindValue(":telephone", telephone);
     query.bindValue(":gender", gender);
-    query.bindValue(":ide", ide);  // On lie l'IDE de l'employé que l'on souhaite modifier
+    query.bindValue(":cin", cin);
 
-    // Exécuter la requête
-    if (!query.exec()) {
-        qDebug() << "Erreur lors de la modification de l'employé : " << query.lastError();
-        return false;  // Retourner false en cas d'erreur
-    }
-
-    return true;  // Retourner true si la modification s'est bien passée
+    return query.exec();
 }
+
+
+

@@ -6,15 +6,45 @@
 #include <QSqlDatabase>
 #include <QButtonGroup>
 #include "mainwindow.h"
+#include <QInputDialog>
+#include <QtCharts/QChartView>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QApplication>
+#include <QMainWindow>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QChart>      // Nécessaire pour QChart
+#include <QLayoutItem>          // Pour manipuler les éléments du layout
+#include <QHBoxLayout>
+#include <QtCharts/QChartView>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QtCharts/QChartView>
+#include <QPdfWriter>// Inclure QPrinter pour gérer l'impression PDF
+#include <QFileDialog>  // Pour QFileDialog
+#include <QPrinter>     // Pour QPrinter
+#include <QPainter>     // Pour QPainter   // Pour QPainter
+#include <QFont>        // Pour QFont
+#include <QDebug>
 
+#include <QTextDocument>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
+#include <QPageSize>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+      remplirComboBoxEmployes();
+    afficherEmployes();
 
-    // Vérification de la connexion à la base de données
+
+
     Connection conn;
     if (!conn.createconnect()) {
         QMessageBox::critical(this, "Erreur de connexion", "Impossible de se connecter à la base de données.");
@@ -25,19 +55,130 @@ MainWindow::MainWindow(QWidget *parent)
     genderGroup->addButton(ui->radioButtonHomme);
     genderGroup->addButton(ui->radioButtonFemme);
     genderGroup->setExclusive(true);  // Assurer qu'un seul bouton peut être sélectionné
+
+    connect(ui->pushButton_Recherche, &QPushButton::clicked, this, &MainWindow::on_pushButton_Recherche_clicked);
+    connect(ui->pushButton_4TriEmployes, &QPushButton::clicked, this, &MainWindow::on_pushButton_4TriEmployes_clicked);
+    connect(ui->comboBoxTriEmployes, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainWindow::on_comboBox_TriEmployes_currentIndexChanged);
+
+    connect(ui->btnEnregistrerHeures, &QPushButton::clicked, this, &MainWindow::enregistrerHeures);
+    connect(ui->exportButton, &QPushButton::clicked, this, &MainWindow::exportSelectedContractToPDF);
+    connect(ui->pushButton_ShowCamembert, &QPushButton::clicked, this, &MainWindow::afficherCamembert);
+
+
+
+
 }
 
-MainWindow::~MainWindow()
+
+
+void MainWindow::afficherCamembert()
 {
-    delete ui;
+    int moins40 = 0;
+    int entre40et80 = 0;
+    int plus80 = 0;
+    int totalEmployes = 0;
+
+    QSqlQuery query("SELECT SUM(HEURES_TRAVAILLEES) AS total_heures, IDE FROM HEURES_TRAVAIL GROUP BY IDE");
+    while (query.next()) {
+        int total = query.value("total_heures").toInt();
+        int ide = query.value("IDE").toInt();
+        qDebug() << "Employé ID:" << ide << "Heures travaillées:" << total;
+
+        if (total < 40)
+            moins40++;
+        else if (total <= 80)
+            entre40et80++;
+        else
+            plus80++;
+
+        totalEmployes++;
+    }
+
+    // Calcul des pourcentages
+    double pourcentageMoins40 = (double)moins40 / totalEmployes * 100;
+    double pourcentageEntre40et80 = (double)entre40et80 / totalEmployes * 100;
+    double pourcentagePlus80 = (double)plus80 / totalEmployes * 100;
+
+    // Création du graphique camembert
+    QPieSeries *series = new QPieSeries();
+    QPieSlice *slice1 = series->append("Moins de 40h", moins40);
+    QPieSlice *slice2 = series->append("40-80h", entre40et80);
+    QPieSlice *slice3 = series->append("Plus de 80h", plus80);
+
+    // Définir les étiquettes avec les pourcentages
+    slice1->setLabel(QString("%1%").arg(pourcentageMoins40, 0, 'f', 1));
+    slice2->setLabel(QString("%1%").arg(pourcentageEntre40et80, 0, 'f', 1));
+    slice3->setLabel(QString("%1%").arg(pourcentagePlus80, 0, 'f', 1));
+
+    // Crée le graphique camembert
+    QChart *chart = new QChart();
+    chart->addSeries(series);
+    chart->setTitle("Répartition des heures travaillées");
+    // 🔥 Animation !
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+
+    // Couleurs personnalisées (optionnel)
+    slice1->setBrush(QColor("#FF9999")); // Rouge clair
+    slice2->setBrush(QColor("#FFCC66")); // Orange
+    slice3->setBrush(QColor("#66CC99")); // Vert
+
+    QChartView *chartView = new QChartView(chart);
+    chartView->setRenderHint(QPainter::Antialiasing);
+
+    if (ui->layoutCamembert) {
+        QLayoutItem *item;
+        while ((item = ui->layoutCamembert->takeAt(0)) != nullptr) {
+            delete item->widget();
+            delete item;
+        }
+        ui->layoutCamembert->addWidget(chartView);
+    } else {
+        qDebug() << "LayoutCamembert est null";
+        QMessageBox::critical(this, "Erreur", "LayoutCamembert n'est pas trouvé !");
+    }
 }
+
+void MainWindow::enregistrerHeures()
+{
+    int idEmploye = ui->comboBox_Employe->currentData().toInt();  // ID sélectionné
+    int heures = ui->spinBox_HeuresTravaillees->value();          // Heures entrées
+    QDate dateJour = ui->dateEdit->date();                        // Date sélectionnée
+
+    QSqlQuery query;
+    query.prepare("INSERT INTO HEURES_TRAVAIL (IDE, HEURES_TRAVAILLEES, DATE_JOUR) "
+                  "VALUES (:id, :heures, :date)");
+    query.bindValue(":id", idEmploye);
+    query.bindValue(":heures", heures);
+    query.bindValue(":date", dateJour);
+
+    if (query.exec()) {
+        QMessageBox::information(this, "Succès", "Les heures ont été enregistrées avec succès.");
+    } else {
+        QMessageBox::critical(this, "Erreur", "Impossible d'enregistrer les heures : " + query.lastError().text());
+    }
+}
+void MainWindow::remplirComboBoxEmployes() {
+    ui->comboBox_Employe->clear();
+    ui->comboBox_Employe->clear();  // <-- vide la comboBox avant remplissage
+    QSqlQuery query("SELECT ide, nom FROM EMPLOYES");
+    while (query.next()) {
+        int id = query.value(0).toInt();
+        QString nom = query.value(1).toString();
+        QString itemText = QString::number(id) + " - " + nom;
+        ui->comboBox_Employe->addItem(itemText, id);
+    }
+}
+
+
 void MainWindow::on_btn_Valider_clicked()
 {
     QString nom = ui->lineEdit_Nom->text();
     QString prenom = ui->lineEdit_Prenom->text();
     QString email = ui->lineEdit_Email->text();
     QString telephone = ui->lineEdit_Telephone->text();
-    QString poste = ui->lineEdit_Poste->text();
+    QString poste = ui->comboBox_Poste->currentText();
+
     QString salaire = ui->lineEdit_Salaire->text();
     QString cin = ui->lineEdit_CIN->text();
     QString motDePasse = ui->lineEdit_MotDePasse->text();
@@ -126,7 +267,7 @@ void MainWindow::on_btn_Annuler_clicked()
     ui->lineEdit_Prenom->clear();
     ui->lineEdit_Email->clear();
     ui->lineEdit_Telephone->clear();
-    ui->lineEdit_Poste->clear();
+    ui->comboBox_Poste->clear();
     ui->lineEdit_Salaire->clear();
     ui->lineEdit_CIN->clear();
     ui->lineEdit_MotDePasse->clear();
@@ -144,145 +285,155 @@ void MainWindow::on_btn_Annuler_clicked()
 
 
 // Dans votre méthode (par exemple, un slot qui est appelé lorsque vous souhaitez afficher les employés)
-
-void MainWindow::on_pushButtonAfficher_clicked()
+void MainWindow::afficherEmployes()
 {
     qDebug() << "La fonction afficherEmployes a été appelée";  // Débogage
 
-    // Vérification si la connexion à la base de données est ouverte
+    // Vérifier si la connexion à la base de données est ouverte
     if (!QSqlDatabase::database().isOpen()) {
         QMessageBox::critical(this, "Erreur", "La connexion à la base de données n'est pas ouverte.");
-        return;  // Quitte la fonction si la connexion n'est pas ouverte
+        return;
     }
 
-
-
-    // Créer une requête SQL pour récupérer les employés
+    // Exécuter la requête sans sélectionner l'ID
     QSqlQuery query;
-    query.prepare("SELECT * FROM EMPLOYES");
+    query.prepare("SELECT PRENOM, NOM, SALAIRE, POSTE, CIN, EMAIL, NUMERODETELEPHONE, GENDER FROM EMPLOYES");
 
-    // Exécuter la requête
     if (!query.exec()) {
         QMessageBox::critical(this, "Erreur", "Impossible d'exécuter la requête : " + query.lastError().text());
-        return;  // Si la requête échoue, un message d'erreur sera affiché et la fonction s'arrête
+        return;
     }
 
-    // Vider le QTableWidget avant d'afficher les nouveaux résultats
+    // Vider le tableau avant de charger les nouveaux résultats
     ui->tableWidgetEmployes->clearContents();
-    ui->tableWidgetEmployes->setRowCount(0);  // Remettre le nombre de lignes à 0
+    ui->tableWidgetEmployes->setRowCount(0);
+    ui->tableWidgetEmployes->setColumnCount(8); // 9 colonnes au lieu de 10
 
-    // Parcourir les résultats de la requête et ajouter les données dans le QTableWidget
+    // Remplir le tableau avec les résultats
     int row = 0;
     while (query.next()) {
-        ui->tableWidgetEmployes->insertRow(row);  // Insérer une nouvelle ligne dans le QTableWidget
-
-        // Ajouter les données dans chaque cellule de la ligne
-        ui->tableWidgetEmployes->setItem(row, 0, new QTableWidgetItem(query.value("IDE").toString()));
-        ui->tableWidgetEmployes->setItem(row, 1, new QTableWidgetItem(query.value("PRENOM").toString()));
-        ui->tableWidgetEmployes->setItem(row, 2, new QTableWidgetItem(query.value("NOM").toString()));
-        ui->tableWidgetEmployes->setItem(row, 3, new QTableWidgetItem(query.value("SALAIRE").toString()));
-        ui->tableWidgetEmployes->setItem(row, 4, new QTableWidgetItem(query.value("POSTE").toString()));
-        ui->tableWidgetEmployes->setItem(row, 5, new QTableWidgetItem(query.value("CIN").toString()));
-        ui->tableWidgetEmployes->setItem(row, 6, new QTableWidgetItem(query.value("EMAIL").toString()));
-        ui->tableWidgetEmployes->setItem(row, 7, new QTableWidgetItem(query.value("NUMERODETELEPHONE").toString()));
-        ui->tableWidgetEmployes->setItem(row, 8, new QTableWidgetItem(query.value("MOTDEPASSE").toString()));
-        ui->tableWidgetEmployes->setItem(row, 9, new QTableWidgetItem(query.value("GENDER").toString()));
-
+        ui->tableWidgetEmployes->insertRow(row);
+        ui->tableWidgetEmployes->setItem(row, 0, new QTableWidgetItem(query.value("PRENOM").toString()));
+        ui->tableWidgetEmployes->setItem(row, 1, new QTableWidgetItem(query.value("NOM").toString()));
+        ui->tableWidgetEmployes->setItem(row, 2, new QTableWidgetItem(query.value("SALAIRE").toString()));
+        ui->tableWidgetEmployes->setItem(row, 3, new QTableWidgetItem(query.value("POSTE").toString()));
+        ui->tableWidgetEmployes->setItem(row, 4, new QTableWidgetItem(query.value("CIN").toString()));
+        ui->tableWidgetEmployes->setItem(row, 5, new QTableWidgetItem(query.value("EMAIL").toString()));
+        ui->tableWidgetEmployes->setItem(row, 6, new QTableWidgetItem(query.value("NUMERODETELEPHONE").toString()));
+        ui->tableWidgetEmployes->setItem(row, 7, new QTableWidgetItem(query.value("GENDER").toString()));
         row++;
     }
- connect(ui->pushButtonAfficher, &QPushButton::clicked, this, &MainWindow::on_pushButtonAfficher_clicked);
-    // Vérifier si le tableau est vide
+
+    // Ajuster la taille des colonnes pour une meilleure lisibilité
+    ui->tableWidgetEmployes->horizontalHeader()->setStretchLastSection(true);
+
+    // Si aucun employé trouvé, afficher un message
     if (row == 0) {
         QMessageBox::information(this, "Aucun employé", "Il n'y a pas d'employé à afficher.");
     }
 }
 
+
+
+
 void MainWindow::on_deleteButton_clicked()
 {
-    // Get the selected employee's ID from the QTableWidget (assuming you select a row to delete)
-    int row = ui->tableWidgetEmployes->currentRow();  // Get the currently selected row
+    // Vérifier si un employé est sélectionné dans le tableau
+    int row = ui->tableWidgetEmployes->currentRow();
     if (row == -1) {
         QMessageBox::warning(this, "Sélection incorrecte", "Veuillez sélectionner un employé à supprimer.");
         return;
     }
 
-    // Get the employee's IDE (assuming it's in the first column)
-    QString ide = ui->tableWidgetEmployes->item(row, 0)->text();
+    // Récupérer le CIN de l'employé sélectionné (supposons qu'il est dans la 4e colonne, index 3)
+    QString cin = ui->tableWidgetEmployes->item(row, 3)->text();  // Vérifie bien l'index correct !
 
-    // Create the SQL query to delete the employee by IDE
+    // Demander confirmation
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Confirmation", "Voulez-vous vraiment supprimer cet employé ?",
+                                  QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No) {
+        return;
+    }
+
+    // Supprimer l'employé de la base de données en utilisant CIN
     QSqlQuery query;
-    query.prepare("DELETE FROM EMPLOYES WHERE IDE = :ide");
-    query.bindValue(":ide", ide);
-    connect(ui->deleteButton, &QPushButton::clicked, this, &MainWindow::on_deleteButton_clicked);
+    query.prepare("DELETE FROM EMPLOYES WHERE CIN = :cin");
+    query.bindValue(":cin", cin);
 
-    // Execute the delete query
     if (query.exec()) {
         QMessageBox::information(this, "Succès", "L'employé a été supprimé avec succès.");
-        ui->tableWidgetEmployes->removeRow(row);  // Remove the row from the UI
+        ui->tableWidgetEmployes->removeRow(row);  // Supprimer la ligne de l'interface
     } else {
         QMessageBox::critical(this, "Erreur", "Impossible de supprimer l'employé : " + query.lastError().text());
     }
 }
+
 void MainWindow::on_tableWidgetEmployes_itemSelectionChanged()
 {
-    // Vérifier si un employé est sélectionné dans le tableau
     int row = ui->tableWidgetEmployes->currentRow();
     if (row == -1) {
         return; // Si aucune ligne n'est sélectionnée, ne rien faire
     }
 
-    // Récupérer l'IDE de l'employé sélectionné
-    QString ide = ui->tableWidgetEmployes->item(row, 0)->text();  // Supposons que l'IDE est dans la première colonne
+    // Récupérer le CIN de l'employé sélectionné (colonne où il est affiché, adapte si nécessaire)
+    QString cin = ui->tableWidgetEmployes->item(row, 4)->text();
 
     // Créer une requête pour récupérer les informations de l'employé à partir de la base de données
     QSqlQuery query;
-    query.prepare("SELECT * FROM EMPLOYES WHERE IDE = :ide");
-    query.bindValue(":ide", ide);
+    query.prepare("SELECT * FROM EMPLOYES WHERE CIN = :cin");  // Utilisation du CIN à la place de l'IDE
+    query.bindValue(":cin", cin);
 
     // Exécuter la requête
     if (query.exec() && query.next()) {
-        // Récupérer les valeurs des colonnes et remplir le formulaire
+        // Remplir les champs du formulaire
         ui->lineEdit_Nom->setText(query.value("NOM").toString());
         ui->lineEdit_Prenom->setText(query.value("PRENOM").toString());
         ui->lineEdit_Email->setText(query.value("EMAIL").toString());
         ui->lineEdit_Telephone->setText(query.value("NUMERODETELEPHONE").toString());
-        ui->lineEdit_Poste->setText(query.value("POSTE").toString());
+        ui->comboBox_Poste->setCurrentText(query.value("POSTE").toString());  // ✅ Correct
+
         ui->lineEdit_Salaire->setText(query.value("SALAIRE").toString());
         ui->lineEdit_CIN->setText(query.value("CIN").toString());
 
+        // Vérifier le genre et cocher le bon bouton radio
         QString gender = query.value("GENDER").toString();
-        if (gender == "Homme") {
-            ui->radioButtonHomme->setChecked(true);
-        } else if (gender == "Femme") {
-            ui->radioButtonFemme->setChecked(true);
-        }
+        ui->radioButtonHomme->setChecked(gender == "Homme");
+        ui->radioButtonFemme->setChecked(gender == "Femme");
     } else {
         QMessageBox::warning(this, "Erreur", "Impossible de récupérer les informations de l'employé.");
     }
 }
 
+
 void MainWindow::on_modifierButton_clicked()
 {
-    // Vérifier si un employé est sélectionné dans le tableau
     int row = ui->tableWidgetEmployes->currentRow();
     if (row == -1) {
         QMessageBox::warning(this, "Sélection incorrecte", "Veuillez sélectionner un employé à modifier.");
         return;
     }
 
-    // Récupérer l'IDE de l'employé sélectionné
-    QString ide = ui->tableWidgetEmployes->item(row, 0)->text();  // Supposons que l'IDE est dans la première colonne
+    // Récupérer le CIN à partir du tableau (colonne 4 ici, vérifie si c'est correct)
+    QString cin = ui->tableWidgetEmployes->item(row, 4)->text().trimmed();
 
-    // Récupérer les nouvelles valeurs des champs de modification
-    QString nom = ui->lineEdit_Nom->text();
-    QString prenom = ui->lineEdit_Prenom->text();
-    QString email = ui->lineEdit_Email->text();
-    QString telephone = ui->lineEdit_Telephone->text();
-    QString poste = ui->lineEdit_Poste->text();
-    QString salaire = ui->lineEdit_Salaire->text();
-    QString cin = ui->lineEdit_CIN->text();
+    if (cin.isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Impossible de récupérer le CIN de l'employé.");
+        return;
+    }
+
+    // Récupérer les nouvelles valeurs des champs
+    QString prenom = ui->lineEdit_Prenom->text().trimmed();
+    QString nom = ui->lineEdit_Nom->text().trimmed();
+    QString email = ui->lineEdit_Email->text().trimmed();
+    QString telephone = ui->lineEdit_Telephone->text().trimmed();
+    QString poste = ui->comboBox_Poste->currentText().trimmed();  // ✅ Correct
+
+    QString salaireStr = ui->lineEdit_Salaire->text().trimmed();
     QString gender;
-    if (ui->radioButtonHomme->isChecked()) {
+
+    if (ui->radioButtonHomme->isChecked())
+    {
         gender = "Homme";
     } else if (ui->radioButtonFemme->isChecked()) {
         gender = "Femme";
@@ -292,27 +443,275 @@ void MainWindow::on_modifierButton_clicked()
     }
 
     if (nom.isEmpty() || prenom.isEmpty() || email.isEmpty() || telephone.isEmpty() ||
-        poste.isEmpty() || salaire.isEmpty() || cin.isEmpty()) {
+        poste.isEmpty() || salaireStr.isEmpty()) {
         QMessageBox::warning(this, "Erreur", "Tous les champs doivent être remplis !");
-        return;  // Ne pas continuer si des champs sont vides
+        return;
     }
 
-    // Appeler la fonction modifier() dans la classe Employe pour mettre à jour l'employé dans la base de données
-    bool success = Employe::modifier(ide, prenom, nom, salaire, poste, cin, email, telephone, gender);
+    bool ok;
+    double salaire = salaireStr.toDouble(&ok);
+    if (!ok) {
+        QMessageBox::warning(this, "Erreur", "Le salaire doit être un nombre valide !");
+        return;
+    }
 
+    // Modifier l'employé par son CIN
+    bool success = Employe::modifier(cin, prenom, nom, salaire, poste, email, telephone, gender);
     if (success) {
         QMessageBox::information(this, "Succès", "L'employé a été modifié avec succès.");
-
-        // Mettre à jour la ligne correspondante dans le QTableWidget
-        ui->tableWidgetEmployes->item(row, 1)->setText(prenom);  // Mettre à jour le prénom
-        ui->tableWidgetEmployes->item(row, 2)->setText(nom);      // Mettre à jour le nom
-        ui->tableWidgetEmployes->item(row, 3)->setText(salaire);  // Mettre à jour le salaire
-        ui->tableWidgetEmployes->item(row, 4)->setText(poste);    // Mettre à jour le poste
-        ui->tableWidgetEmployes->item(row, 5)->setText(cin);      // Mettre à jour le CIN
-        ui->tableWidgetEmployes->item(row, 6)->setText(email);    // Mettre à jour l'email
-        ui->tableWidgetEmployes->item(row, 7)->setText(telephone);// Mettre à jour le téléphone
-        ui->tableWidgetEmployes->item(row, 8)->setText(gender);   // Mettre à jour le genre
+        afficherEmployes(); // Rafraîchir la liste
     } else {
         QMessageBox::critical(this, "Erreur", "Impossible de modifier l'employé.");
     }
 }
+
+
+
+
+
+void MainWindow::on_pushButton_Recherche_clicked() {
+    qDebug() << "\n=== Début de la recherche d'employés ===";
+    qDebug() << "Bouton de recherche cliqué!";
+
+    QString searchText = ui->lineEdit_Recherche->text().trimmed(); // récupère le texte de recherche
+    qDebug() << "Texte de recherche:" << searchText;
+
+    if (searchText.isEmpty()) {
+        QMessageBox::information(this, "Information", "Veuillez entrer un terme de recherche.");
+        return;
+    }
+
+    searchEmployes(searchText);
+}
+
+void MainWindow::searchEmployes(const QString &searchText) {
+    qDebug() << "Recherche avec le terme:" << searchText;
+
+    ui->tableWidgetEmployes->clearContents();  // Réinitialiser la table
+    ui->tableWidgetEmployes->setRowCount(0);   // Réinitialiser les lignes de la table
+
+    QSqlQuery query;
+    QString queryStr = "SELECT NOM, PRENOM, POSTE, CIN, EMAIL, NUMERODETELEPHONE, GENDER, SALAIRE "
+                       "FROM EMPLOYES "
+                       "WHERE UPPER(NOM) LIKE UPPER(:nom) OR "
+                       "UPPER(PRENOM) LIKE UPPER(:prenom) OR "
+                       "UPPER(POSTE) LIKE UPPER(:poste) OR "
+                       "CIN LIKE :cin OR "
+                       "UPPER(EMAIL) LIKE UPPER(:email)";
+
+    query.prepare(queryStr);
+
+    QString wildcard = "%" + searchText + "%";  // Ajouter des caractères génériques
+
+    query.bindValue(":nom", wildcard);
+    query.bindValue(":prenom", wildcard);
+    query.bindValue(":poste", wildcard);
+    query.bindValue(":cin", wildcard);
+    query.bindValue(":email", wildcard);
+
+    if (query.exec()) {
+        int rowCount = 0;
+
+        ui->tableWidgetEmployes->setColumnCount(8);  // Définir le nombre de colonnes
+        QStringList headers = {"Nom", "Prénom", "Poste", "CIN", "Email", "Téléphone", "Genre", "Salaire"};
+        ui->tableWidgetEmployes->setHorizontalHeaderLabels(headers);  // Définir les en-têtes
+
+        while (query.next()) {
+            ui->tableWidgetEmployes->insertRow(rowCount);  // Insérer une nouvelle ligne
+
+            // Remplir les colonnes avec les données
+            for (int col = 0; col < 8; ++col) {
+                QString value = query.value(col).toString();
+                QTableWidgetItem *item = new QTableWidgetItem(value);
+                ui->tableWidgetEmployes->setItem(rowCount, col, item);
+            }
+
+            rowCount++;
+        }
+
+        if (rowCount == 0) {
+            QMessageBox::information(this, "Information", "Aucun employé trouvé.");
+        }
+    } else {
+        qDebug() << "Erreur SQL:" << query.lastError().text();  // Afficher l'erreur SQL dans le debug
+        QMessageBox::critical(this, "Erreur", "Échec lors de la recherche.");
+    }
+}
+void MainWindow::on_pushButton_4TriEmployes_clicked()
+{
+    qDebug() << "\n=== Début du tri des employés ===";
+    qDebug() << "Bouton de tri cliqué!";
+
+    // Récupérer le critère de tri
+    QString criterion = ui->comboBoxTriEmployes->currentText();
+    qDebug() << "Critère de tri:" << criterion;
+
+    // Effectuer le tri des employés
+    sortEmployes(criterion);
+}
+void MainWindow::on_comboBox_TriEmployes_currentIndexChanged(int index)
+{
+    qDebug() << "Critère de tri changé à l'index:" << index;
+    qDebug() << "Nouveau critère:" << ui->comboBoxTriEmployes->currentText();
+}
+
+
+void MainWindow::sortEmployes(const QString &criterion)
+{
+    qDebug() << "Tri des employés selon le critère:" << criterion;
+
+    // Déterminer la colonne SQL à utiliser pour le tri
+    QString orderByColumn;
+
+    if (criterion == "Nom") {
+        orderByColumn = "NOM";
+    } else if (criterion == "Genre") {  // Remplace "CIN" par "Genre"
+        orderByColumn = "GENDER";
+    } else if (criterion == "Poste") {
+        orderByColumn = "POSTE";
+    } else {
+        // Par défaut, trier par Nom
+        orderByColumn = "NOM";
+    }
+
+    // Vider la table actuelle
+    ui->tableWidgetEmployes->clearContents();
+    ui->tableWidgetEmployes->setRowCount(0);
+
+    // Préparer la requête SQL avec tri
+    QSqlQuery query;
+    QString queryStr = "SELECT NOM, PRENOM, POSTE, CIN, EMAIL, NUMERODETELEPHONE, GENDER, SALAIRE "
+                       "FROM EMPLOYES "
+                       "ORDER BY " + orderByColumn;
+
+    if (query.exec(queryStr)) {
+        int rowCount = 0;
+
+        // Configuration des en-têtes
+        ui->tableWidgetEmployes->setColumnCount(8);
+        QStringList headers;
+        headers << "Nom" << "Prénom" << "Poste" << "CIN" << "Email" << "Téléphone" << "Genre" << "Salaire";
+        ui->tableWidgetEmployes->setHorizontalHeaderLabels(headers);
+
+        // Remplir la table avec les résultats
+        while (query.next()) {
+            ui->tableWidgetEmployes->insertRow(rowCount);
+
+            for (int col = 0; col < 8; ++col) {
+                QTableWidgetItem *item = new QTableWidgetItem(query.value(col).toString());
+                ui->tableWidgetEmployes->setItem(rowCount, col, item);
+            }
+
+            rowCount++;
+        }
+
+        // Ajuster les colonnes
+        ui->tableWidgetEmployes->resizeColumnsToContents();
+        ui->tableWidgetEmployes->resizeRowsToContents();
+
+        QMessageBox::information(this, "Tri", QString("Les employés ont été triés par %1.").arg(criterion.toLower()));
+    } else {
+        qDebug() << "Erreur lors du tri:" << query.lastError().text();
+        QMessageBox::critical(this, "Erreur", "Erreur lors du tri: " + query.lastError().text());
+    }
+}
+
+void MainWindow::exportSelectedContractToPDF()
+{
+    int row = ui->tableWidgetEmployes->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Avertissement", "Veuillez sélectionner un contrat à exporter.");
+        return;
+    }
+
+    QString nom = ui->tableWidgetEmployes->item(row, 0)->text();
+    QString prenom = ui->tableWidgetEmployes->item(row, 1)->text();
+    QString salaire = ui->tableWidgetEmployes->item(row, 2)->text();
+    QString poste = ui->tableWidgetEmployes->item(row, 3)->text();
+    QString cin = ui->tableWidgetEmployes->item(row, 4)->text();
+    QString email = ui->tableWidgetEmployes->item(row, 5)->text();
+    QString telephone = ui->tableWidgetEmployes->item(row, 6)->text();
+    QString genre = ui->tableWidgetEmployes->item(row, 7)->text();
+
+    QString dateActuelle = QDate::currentDate().toString("dd/MM/yyyy");
+
+    QString htmlContent = R"(
+    <html>
+    <head>
+        <style>
+            body { font-family: 'Arial'; color: #333; }
+            h1 { text-align: center; color: #2c3e50; }
+            .header {
+                text-align: center;
+                font-size: 22px;
+                font-weight: bold;
+                color: #2980b9;
+                margin-bottom: 30px;
+            }
+            .info-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            .info-table td { padding: 8px 12px; border-bottom: 1px solid #ccc; }
+            .label { font-weight: bold; width: 30%; background-color: #f0f0f0; }
+            .footer { margin-top: 50px; }
+            .signature { margin-top: 40px; }
+        </style>
+    </head>
+    <body>
+        <h1>Contrat de Travail</h1>
+        <div class='header'>WorkShift - Plateforme de consulting</div>
+
+        <p><b>Date d'exportation :</b> )" + dateActuelle + R"(</p>
+
+        <table class='info-table'>
+            <tr><td class='label'>Nom</td><td>)" + nom + R"(</td></tr>
+            <tr><td class='label'>Prénom</td><td>)" + prenom + R"(</td></tr>
+            <tr><td class='label'>Poste</td><td>)" + poste + R"(</td></tr>
+            <tr><td class='label'>Email</td><td>)" + email + R"(</td></tr>
+            <tr><td class='label'>Téléphone</td><td>)" + telephone + R"(</td></tr>
+            <tr><td class='label'>CIN</td><td>)" + cin + R"(</td></tr>
+            <tr><td class='label'>Genre</td><td>)" + genre + R"(</td></tr>
+            <tr><td class='label'>Salaire</td><td>)" + salaire + R"( DT</td></tr>
+        </table>
+
+        <div class='footer'>
+            <div class='signature'>
+                <p><b>Signature de l'employé</b></p>
+                <p>_______________________</p>
+            </div>
+        </div>
+    </body>
+    </html>
+)";
+
+
+    QString fileName = QFileDialog::getSaveFileName(this, "Exporter en PDF", "", "Fichiers PDF (*.pdf)");
+    if (fileName.isEmpty()) return;
+
+    QTextDocument doc;
+    doc.setHtml(htmlContent);
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(fileName);
+    printer.setPageSize(QPageSize::A4);
+
+    doc.print(&printer);
+
+    QMessageBox::information(this, "Succès", "Le contrat a été exporté avec succès !");
+}
+
+
+
+
+
+
+
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+
+}
+
+
+
+
