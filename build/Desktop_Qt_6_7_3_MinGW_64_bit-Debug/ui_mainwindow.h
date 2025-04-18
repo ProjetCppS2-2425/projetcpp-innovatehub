@@ -14,6 +14,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDateEdit>
+#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
@@ -97,10 +98,10 @@ public:
     QLabel *label_14;
     QWidget *tab_3;
     QPushButton *Bemploye_10;
-    QPushButton *Bemploye_11;
-    QPushButton *Bemploye_9;
+    QPushButton *btn_register;
     QWidget *widget;
-    QLabel *label_26;
+    QWidget *formLayoutWidget;
+    QFormLayout *cameraLayout;
     QLabel *label_27;
     QLabel *label_28;
     QWidget *page_3;
@@ -377,19 +378,18 @@ public:
         Bemploye_10 = new QPushButton(tab_3);
         Bemploye_10->setObjectName("Bemploye_10");
         Bemploye_10->setGeometry(QRect(220, 440, 151, 29));
-        Bemploye_11 = new QPushButton(tab_3);
-        Bemploye_11->setObjectName("Bemploye_11");
-        Bemploye_11->setGeometry(QRect(20, 440, 181, 29));
-        Bemploye_9 = new QPushButton(tab_3);
-        Bemploye_9->setObjectName("Bemploye_9");
-        Bemploye_9->setGeometry(QRect(390, 440, 211, 29));
+        btn_register = new QPushButton(tab_3);
+        btn_register->setObjectName("btn_register");
+        btn_register->setGeometry(QRect(20, 440, 181, 29));
         widget = new QWidget(tab_3);
         widget->setObjectName("widget");
         widget->setGeometry(QRect(10, 20, 621, 381));
-        label_26 = new QLabel(widget);
-        label_26->setObjectName("label_26");
-        label_26->setGeometry(QRect(-60, -10, 691, 391));
-        label_26->setPixmap(QPixmap(QString::fromUtf8("../../Downloads/Baixar \303\255cone de reconhecimento facial, vetor de linha de varredura biom\303\251trica de rosto gratuitamente.jpeg")));
+        formLayoutWidget = new QWidget(widget);
+        formLayoutWidget->setObjectName("formLayoutWidget");
+        formLayoutWidget->setGeometry(QRect(-10, -20, 621, 401));
+        cameraLayout = new QFormLayout(formLayoutWidget);
+        cameraLayout->setObjectName("cameraLayout");
+        cameraLayout->setContentsMargins(0, 0, 0, 0);
         label_27 = new QLabel(tab_3);
         label_27->setObjectName("label_27");
         label_27->setGeometry(QRect(680, 210, 151, 20));
@@ -488,9 +488,7 @@ public:
         label_14->setText(QCoreApplication::translate("MainWindow", "date du jour :", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("MainWindow", "statistique ", nullptr));
         Bemploye_10->setText(QCoreApplication::translate("MainWindow", " Capturer une image", nullptr));
-        Bemploye_11->setText(QCoreApplication::translate("MainWindow", "Lancer la reconnaissance", nullptr));
-        Bemploye_9->setText(QCoreApplication::translate("MainWindow", " Enregistrer un nouveau visage", nullptr));
-        label_26->setText(QString());
+        btn_register->setText(QCoreApplication::translate("MainWindow", "Lancer la reconnaissance", nullptr));
         label_27->setText(QCoreApplication::translate("MainWindow", " Statut de l\342\200\231utilisateur", nullptr));
         label_28->setText(QCoreApplication::translate("MainWindow", " Nom de l' employ\303\251 ", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("MainWindow", "m\303\251tiers", nullptr));

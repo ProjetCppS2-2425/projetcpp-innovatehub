@@ -22,6 +22,9 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
 
 
 
@@ -55,18 +58,19 @@ private slots:
     void enregistrerHeures();
     void exportSelectedContractToPDF() ;
       // Déclaration de la fonction d'exportation PDF
-
-
-
-
-
+    void verifyFace(const QString &imagePath, const QString &faceToken);
+    void startCameraAndCapture();
+    void registerFace(const QString &imagePath);
+    void updateFaceIdAndToken(const QString &faceId, const QString &faceToken, int currentEmployeeId);
+    void getFaceId(const QString &faceToken);
+    void enregistrerFaceTokenDansBDD(const QString &faceToken);
 private:
     Ui::MainWindow *ui;
-
+   int currentEmployeeId;
 void searchEmployes(const QString &searchText);
     void sortEmployes(const QString &criterion);
 QPushButton *exportButton;  // Déclaration du bouton
-
+   QNetworkAccessManager *networkManager;
  QHBoxLayout *layoutCamembert;
 };
 

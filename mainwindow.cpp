@@ -28,12 +28,36 @@
 #include <QPainter>     // Pour QPainter   // Pour QPainter
 #include <QFont>        // Pour QFont
 #include <QDebug>
-
 #include <QTextDocument>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
 #include <QPageSize>
+#include <QTimer>
+#include <QUrlQuery>
+
+#include <QHttpMultiPart>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QHttpMultiPart>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QCamera>
+#include <QMediaCaptureSession>
+#include <QImageCapture>
+#include <QMediaDevices>
+#include <QVideoWidget>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -64,6 +88,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnEnregistrerHeures, &QPushButton::clicked, this, &MainWindow::enregistrerHeures);
     connect(ui->exportButton, &QPushButton::clicked, this, &MainWindow::exportSelectedContractToPDF);
     connect(ui->pushButton_ShowCamembert, &QPushButton::clicked, this, &MainWindow::afficherCamembert);
+    connect(ui->btn_register, &QPushButton::clicked, this, &MainWindow::startCameraAndCapture);
+
 
 
 
@@ -698,11 +724,288 @@ void MainWindow::exportSelectedContractToPDF()
 
     QMessageBox::information(this, "Succès", "Le contrat a été exporté avec succès !");
 }
+void MainWindow::updateFaceIdAndToken(const QString &faceId, const QString &faceToken, int currentEmployeeId)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE EMPLOYES SET FACE_ID = :face_id, FACE_TOKEN = :face_token WHERE IDE = :ide");
+    query.bindValue(":face_id", faceId);
+    query.bindValue(":face_token", faceToken);
+    query.bindValue(":ide", currentEmployeeId);
+
+    if (!query.exec()) {
+        QMessageBox::warning(this, "Erreur", "Erreur lors de l'enregistrement du face_id.\n" + query.lastError().text());
+    } else {
+        QMessageBox::information(this, "Succès", "Face ID et Face Token enregistrés dans la base de données.");
+    }
+}
+void MainWindow::enregistrerFaceTokenDansBDD(const QString &faceToken)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE EMPLOYES SET face_token = :face_token WHERE IDE = :ide");
+
+    // Si le faceToken est vide, on le remplace par un QVariant::Null
+    if (faceToken.isEmpty()) {
+        query.prepare("UPDATE EMPLOYES SET \"face_token\" = :face_token WHERE IDE = :ide");
+    } else {
+        query.bindValue(":face_token", faceToken);
+    }
+
+    query.bindValue(":ide", currentEmployeeId);
+
+    if (!query.exec()) {
+        QMessageBox::warning(this, "Erreur", "Erreur lors de l'enregistrement du face_token.\n" + query.lastError().text());
+    } else {
+        QMessageBox::information(this, "Succès", "Face token enregistré avec succès dans la base de données.");
+    }
+}
+
+void MainWindow::registerFace(const QString &imagePath)
+{
+    QString apiKey = "jk5KjSk7vXY6Ueo148Kcr9xXHaYvMzZl";
+    QString apiSecret = "Dh3r4LeDVTyxnotaF4CotC5FtPJwLrRR";
+    QString url = "https://api-us.faceplusplus.com/facepp/v3/detect";
+
+    QUrl qUrl(url);
+    QNetworkRequest request(qUrl);
+
+    QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+
+    // Clés API
+    QHttpPart keyPart;
+    keyPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"api_key\""));
+    keyPart.setBody(apiKey.toUtf8());
+
+    QHttpPart secretPart;
+    secretPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"api_secret\""));
+    secretPart.setBody(apiSecret.toUtf8());
+
+    // Image
+    QHttpPart imagePart;
+    imagePart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"image_file\"; filename=\"face.jpg\""));
+    imagePart.setHeader(QNetworkRequest::ContentTypeHeader, QVariant("image/jpeg"));
+
+    QFile *file = new QFile(imagePath);
+    if (!file->open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, "Erreur", "Impossible d'ouvrir le fichier image.");
+        return;
+    }
+    imagePart.setBodyDevice(file);
+    file->setParent(multiPart);
+
+    multiPart->append(keyPart);
+    multiPart->append(secretPart);
+    multiPart->append(imagePart);
+
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkReply *reply = manager->post(request, multiPart);
+    multiPart->setParent(reply);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        QByteArray response = reply->readAll();
+        QJsonDocument json = QJsonDocument::fromJson(response);
+        QJsonObject obj = json.object();
+
+        if (!json.isNull() && obj.contains("faces") && !obj["faces"].toArray().isEmpty()) {
+            QString faceToken = obj["faces"].toArray()[0].toObject()["face_token"].toString();
+            qDebug() << "Face token:" << faceToken;
+
+            QMessageBox::information(this, "Succès", "Visage détecté ! Face Token : " + faceToken);
+
+            // Enregistrer dans la BDD
+            enregistrerFaceTokenDansBDD(faceToken);
+        } else {
+            QMessageBox::warning(this, "Erreur", "Aucun visage détecté ou réponse invalide.");
+        }
+
+        reply->deleteLater();
+    });
+}
+
+void MainWindow::getFaceId(const QString &faceToken)
+{
+    QString apiKey = "jk5KjSk7vXY6Ueo148Kcr9xXHaYvMzZl";  // Remplace avec ta vraie clé API
+    QString apiSecret = "Dh3r4LeDVTyxnotaF4CotC5FtPJwLrRR"; // Remplace avec ton vrai secret API
+    QString url = "https://api-us.faceplusplus.com/facepp/v3/face/getfaceid";
+
+    QUrl qUrl(url);
+    QNetworkRequest request(qUrl);
+
+    QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+
+    // Ajouter les clés API
+    QHttpPart keyPart;
+    keyPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"api_key\""));
+    keyPart.setBody(apiKey.toUtf8());
+
+    QHttpPart secretPart;
+    secretPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"api_secret\""));
+    secretPart.setBody(apiSecret.toUtf8());
+
+    // Ajouter le face_token pour récupérer le face_id
+    QHttpPart faceTokenPart;
+    faceTokenPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"face_token\""));
+    faceTokenPart.setBody(faceToken.toUtf8());
+
+    // Ajouter tout à la requête
+    multiPart->append(keyPart);
+    multiPart->append(secretPart);
+    multiPart->append(faceTokenPart);
+
+    // Envoi de la requête
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkReply *reply = manager->post(request, multiPart);
+    multiPart->setParent(reply);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        QByteArray response = reply->readAll();
+        QJsonDocument json = QJsonDocument::fromJson(response);
+
+        if (!json.isNull()) {
+            QJsonObject obj = json.object();
+            if (obj.contains("face_id")) {
+                QString faceId = obj["face_id"].toString();
+                qDebug() << "Face ID:" << faceId;
+
+                // Enregistrer face_id dans la base de données
+                QSqlQuery query;
+                query.prepare("UPDATE EMPLOYES SET FACE_ID = :face_id WHERE IDE = :ide");
+                query.bindValue(":face_id", faceId);  // Valeur du face_id
+                query.bindValue(":ide", currentEmployeeId);  // Assure-toi que currentEmployeeId est bien défini
+
+                if (!query.exec()) {
+                    QMessageBox::warning(this, "Erreur", "Erreur lors de l'enregistrement du face_id.\n" + query.lastError().text());
+                } else {
+                    QMessageBox::information(this, "Succès", "Face ID enregistré dans la base de données.");
+                }
+            } else {
+                QMessageBox::warning(this, "Erreur", "Erreur lors de la récupération du face_id.");
+            }
+        } else {
+            QMessageBox::warning(this, "Erreur", "Réponse invalide de Face++");
+        }
+        reply->deleteLater();
+    });
+}
 
 
+void MainWindow::verifyFace(const QString &imagePath, const QString &faceToken)
+{
+    QString apiKey = "jk5KjSk7vXY6Ueo148Kcr9xXHaYvMzZl";   // Remplace avec ta vraie clé API
+    QString apiSecret = "Dh3r4LeDVTyxnotaF4CotC5FtPJwLrRR";  // Remplace avec ton vrai secret API
+    QString url = "https://api-us.faceplusplus.com/facepp/v3/compare";
+
+    // Créer la requête
+    QUrl apiUrl(url);
+    QNetworkRequest request(apiUrl);
+
+    // Créer le multipart pour la requête
+    QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+
+    // Ajouter les clés API
+    QHttpPart keyPart;
+    keyPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"api_key\""));
+    keyPart.setBody(apiKey.toUtf8());
+
+    QHttpPart secretPart;
+    secretPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"api_secret\""));
+    secretPart.setBody(apiSecret.toUtf8());
+
+    // Ajouter le Face Token
+    QHttpPart faceTokenPart;
+    faceTokenPart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"face_token1\""));
+    faceTokenPart.setBody(faceToken.toUtf8());
+
+    // Ajouter l'image à comparer
+    QHttpPart imagePart;
+    imagePart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"image_file2\"; filename=\"compare_face.jpg\""));
+    imagePart.setHeader(QNetworkRequest::ContentTypeHeader, QVariant("image/jpeg"));
+
+    QFile *file = new QFile(imagePath);
+    if (!file->open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, "Erreur", "Impossible d'ouvrir le fichier image.");
+        return;
+    }
+    imagePart.setBodyDevice(file);
+    file->setParent(multiPart);  // Gère la suppression automatique de file avec multiPart
+
+    // Ajouter tout à la requête multipart
+    multiPart->append(keyPart);
+    multiPart->append(secretPart);
+    multiPart->append(faceTokenPart);
+    multiPart->append(imagePart);
+
+    // Envoi de la requête POST avec les données multipart
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkReply *reply = manager->post(request, multiPart);
+    multiPart->setParent(reply);  // Gère la mémoire de multiPart automatiquement
+
+    // Connexion pour recevoir la réponse
+    connect(reply, &QNetworkReply::finished, this, [reply]() {
+        QByteArray response = reply->readAll();
+        QJsonDocument json = QJsonDocument::fromJson(response);
+
+        if (!json.isNull()) {
+            QJsonObject obj = json.object();
+            if (obj.contains("confidence")) {
+                double confidence = obj["confidence"].toDouble();
+                if (confidence > 80.0) {  // Seuil de confiance
+                    QMessageBox::information(nullptr, "Succès", "Les visages correspondent avec une confiance de " + QString::number(confidence));
+                } else {
+                    QMessageBox::warning(nullptr, "Erreur", "Les visages ne correspondent pas.");
+                }
+            } else {
+                QMessageBox::warning(nullptr, "Erreur", "Réponse invalide de Face++.");
+            }
+        } else {
+            QMessageBox::warning(nullptr, "Erreur", "Réponse invalide de Face++.");
+        }
+        reply->deleteLater();
+    });
+}
 
 
+void MainWindow::startCameraAndCapture()
+{
+    QList<QCameraDevice> cameras = QMediaDevices::videoInputs();
+    if (cameras.isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Aucune caméra n'est disponible !");
+        return;
+    }
 
+    QCamera *camera = new QCamera(cameras.first(), this);
+    QMediaCaptureSession *captureSession = new QMediaCaptureSession(this);
+    QImageCapture *imageCapture = new QImageCapture(this);
+    QVideoWidget *viewfinder = new QVideoWidget(this);
+
+    ui->cameraLayout->addWidget(viewfinder);
+
+    captureSession->setCamera(camera);
+    captureSession->setVideoOutput(viewfinder);
+    captureSession->setImageCapture(imageCapture);
+
+    viewfinder->show();
+    camera->start();
+
+    // Capture automatique après 1,5 secondes
+    QTimer::singleShot(1500, imageCapture, [=]() {
+        imageCapture->captureToFile();
+    });
+
+    connect(imageCapture, &QImageCapture::imageCaptured, this, [=](int id, const QImage &image) {
+        QString imagePath = QFileDialog::getSaveFileName(this, "Enregistrer l'image", "", "Images (*.jpg *.png)");
+        if (!imagePath.isEmpty()) {
+            image.save(imagePath);
+            registerFace(imagePath);
+        }
+
+        camera->stop();
+        ui->cameraLayout->removeWidget(viewfinder);
+        viewfinder->deleteLater();
+        camera->deleteLater();
+        imageCapture->deleteLater();
+        captureSession->deleteLater();
+    });
+}
 
 
 

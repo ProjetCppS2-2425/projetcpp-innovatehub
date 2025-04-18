@@ -909,7 +909,7 @@ font: 9pt &quot;Stencil&quot;;</string>
            <string> Capturer une image</string>
           </property>
          </widget>
-         <widget class="QPushButton" name="Bemploye_11">
+         <widget class="QPushButton" name="btn_register">
           <property name="geometry">
            <rect>
             <x>20</x>
@@ -922,19 +922,6 @@ font: 9pt &quot;Stencil&quot;;</string>
            <string>Lancer la reconnaissance</string>
           </property>
          </widget>
-         <widget class="QPushButton" name="Bemploye_9">
-          <property name="geometry">
-           <rect>
-            <x>390</x>
-            <y>440</y>
-            <width>211</width>
-            <height>29</height>
-           </rect>
-          </property>
-          <property name="text">
-           <string> Enregistrer un nouveau visage</string>
-          </property>
-         </widget>
          <widget class="QWidget" name="widget" native="true">
           <property name="geometry">
            <rect>
@@ -944,21 +931,16 @@ font: 9pt &quot;Stencil&quot;;</string>
             <height>381</height>
            </rect>
           </property>
-          <widget class="QLabel" name="label_26">
+          <widget class="QWidget" name="formLayoutWidget">
            <property name="geometry">
             <rect>
-             <x>-60</x>
-             <y>-10</y>
-             <width>691</width>
-             <height>391</height>
+             <x>-10</x>
+             <y>-20</y>
+             <width>621</width>
+             <height>401</height>
             </rect>
            </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap>../../Downloads/Baixar ícone de reconhecimento facial, vetor de linha de varredura biométrica de rosto gratuitamente.jpeg</pixmap>
-           </property>
+           <layout class="QFormLayout" name="cameraLayout"/>
           </widget>
          </widget>
          <widget class="QLabel" name="label_27">
