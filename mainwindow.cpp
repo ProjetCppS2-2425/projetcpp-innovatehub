@@ -829,53 +829,119 @@ void MainWindow::on_historique_clicked()
 
 void MainWindow::on_mailconseil_clicked()
 {
-    QString recipient = ui->email->text();
+    // 1. Demander le matricule à l'utilisateur
+    bool ok;
+    QString matriculeSaisi = QInputDialog::getText(this, "Entrer le matricule", "Matricule:", QLineEdit::Normal, "", &ok);
 
-    if (recipient.isEmpty()) {
-        QMessageBox::warning(this, "Erreur", "Veuillez saisir l'adresse email du destinataire.");
+    if (!ok || matriculeSaisi.isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Matricule invalide ou vide.");
         return;
     }
 
-    QRegularExpression emailRegex("^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$");
-    if (!emailRegex.match(recipient).hasMatch()) {
-        QMessageBox::warning(this, "Erreur", "L'adresse email saisie est invalide.");
+    // 2. Récupérer les conseils traités correspondant au matricule
+    QSqlQuery query;
+    query.prepare("SELECT idconseil, matricule, etat, description, datee FROM conseil WHERE type = 'traitee' AND matricule = :matricule");
+    query.bindValue(":matricule", matriculeSaisi);
+
+    if (!query.exec()) {
+        QMessageBox::critical(this, "Erreur", "Erreur lors de la récupération des conseils traités : " + query.lastError().text());
         return;
     }
 
+    QString historique;
+
+    while (query.next()) {
+        QString matricule = query.value(1).toString();
+        QString etat = query.value(2).toString();
+        QString description = query.value(3).toString();
+        QString datee = query.value(4).toString();
+
+        historique += QString("🔹 Matricule: %1\nÉtat: %2\nDescription: %3\nDate: %4\n\n")
+                          .arg(matricule, etat, description, datee);
+    }
+
+    if (historique.isEmpty()) {
+        QMessageBox::information(this, "Historique", "Aucun conseil traité trouvé pour ce matricule.");
+        return;
+    }
+
+    // 3. Sauvegarder l'historique dans un fichier texte
+    QString fileName = QString("historique_%1.txt").arg(matriculeSaisi);
+    QFile file(fileName);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << historique;
+        file.close();
+    } else {
+        QMessageBox::warning(this, "Erreur", "Impossible d'écrire dans le fichier " + fileName);
+        return;
+    }
+
+    // 4. Demander l'e-mail du destinataire
+    QString email = QInputDialog::getText(this, "Entrer l'adresse email", "Email:", QLineEdit::Normal, "", &ok);
+    if (!ok || !email.contains("@")) {
+        QMessageBox::warning(this, "Erreur", "Adresse email invalide.");
+        return;
+    }
+
+    // 5. Convertir le fichier en base64
+    QFile fichierAjoute(fileName);
+    if (!fichierAjoute.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, "Erreur", "Impossible d'ouvrir le fichier pour l'envoi.");
+        return;
+    }
+    QByteArray fileData = fichierAjoute.readAll();
+    fichierAjoute.close();
+    QString base64File = QString::fromLatin1(fileData.toBase64());
+
+    // 6. Envoi via l'API MailerSend avec pièce jointe
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     QUrl url("https://api.mailersend.com/v1/email");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("Authorization", "Bearer mlsn.c7ae544628196623acd63c7f9a71409087af39fd7c362ab1cc607e754e961115"); // ⚠️ Remplacez
+    request.setRawHeader("Authorization", "Bearer mlsn.c2515662441bcd9ec81b7037807f04976a04c6b696ec19a98998bbe046025993");
 
-    // Construire l'objet JSON
     QJsonObject fromObj;
-    fromObj["email"] = " syrinechakroun99@gmail.com";
+    fromObj["email"] = "MS_iyAMjV@test-xkjn41mmz2q4z781.mlsender.net";
     fromObj["name"] = "Qt Application";
 
     QJsonObject toObj;
-    toObj["email"] = recipient;
-
+    toObj["email"] = email;
     QJsonArray toArray;
     toArray.append(toObj);
 
-    QJsonObject content;
-    content["from"] = fromObj;
-    content["to"] = toArray;
-    content["subject"] = "Test Email depuis Qt via Mailersend";
-    content["text"] = "Bonjour, ceci est un test d'email via Mailersend depuis Qt.";
+    QJsonObject attachment;
+    attachment["content"] = base64File;
+    attachment["type"] = "text/plain";
+    attachment["filename"] = fileName;
 
-    QJsonDocument jsonDoc(content);
-    QByteArray postData = jsonDoc.toJson();
+    QJsonArray attachments;
+    attachments.append(attachment);
 
-    QNetworkReply *reply = manager->post(request, postData);
+    QJsonObject json;
+    json["from"] = fromObj;
+    json["to"] = toArray;
+    json["subject"] = "Historique des conseils traités";
+    json["text"] = "Veuillez trouver ci-joint l'historique des conseils traités pour le matricule : " + matriculeSaisi;
+    json["attachments"] = attachments;
 
-    connect(reply, &QNetworkReply::finished, this, [reply]() {
+    QJsonDocument doc(json);
+    QByteArray data = doc.toJson();
+
+    QNetworkReply *reply = manager->post(request, data);
+
+    connect(reply, &QNetworkReply::finished, this, [=]() {
+        QByteArray response = reply->readAll();
         if (reply->error() == QNetworkReply::NoError) {
-            QMessageBox::information(nullptr, "Succès", "Email envoyé avec succès via Mailersend !");
+            QMessageBox::information(this, "Succès", "Email envoyé avec succès !");
+            qDebug() << "Réponse MailerSend:" << response;
         } else {
-            QMessageBox::critical(nullptr, "Erreur", "Erreur lors de l'envoi : " + reply->errorString());
+            qDebug() << "Erreur MailerSend:" << reply->errorString() << response;
+            QMessageBox::critical(this, "Erreur", "Erreur lors de l'envoi : " + reply->errorString() + "\n" + QString::fromUtf8(response));
         }
         reply->deleteLater();
     });
+
+    // 7. Supprimer le fichier après envoi
+    QFile::remove(fileName);
 }

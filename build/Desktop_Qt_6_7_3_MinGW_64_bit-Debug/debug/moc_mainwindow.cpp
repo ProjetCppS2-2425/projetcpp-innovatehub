@@ -150,6 +150,7 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 7: _t->on_trieconseil_clicked(); break;
         case 8: _t->on_statconseil_clicked(); break;
         case 9: _t->on_historique_clicked(); break;
+        case 10: _t->on_mailconseil_clicked(); break;
         default: ;
         }
     }

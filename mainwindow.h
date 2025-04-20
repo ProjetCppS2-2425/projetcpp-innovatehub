@@ -47,7 +47,6 @@ private:
     void peuplerComboBoxRecherche(); // Déclaration de la fonction ici
 
     int selectedId = -1;
-
 };
 
 #endif // MAINWINDOW_H
