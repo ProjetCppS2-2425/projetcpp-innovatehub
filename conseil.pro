@@ -1,9 +1,10 @@
 QT += core gui widgets sql charts
 QT += charts
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT += network sql
+QT += network
 
 CONFIG += c++17
-INCLUDEPATH += $$PWD/simplemail
 
 INCLUDEPATH += $$PWD
 # INCLUDEPATH += /chemin/vers/mes/includes  ← Décommente cette ligne si tu as des includes personnalisés

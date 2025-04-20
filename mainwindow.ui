@@ -260,9 +260,9 @@ font: 10pt &quot;Arial&quot;;</string>
            <widget class="QWidget" name="metconseil" native="true">
             <property name="geometry">
              <rect>
-              <x>570</x>
+              <x>290</x>
               <y>50</y>
-              <width>511</width>
+              <width>791</width>
               <height>351</height>
              </rect>
             </property>
@@ -274,8 +274,8 @@ font: 10pt &quot;Arial&quot;;</string>
               <rect>
                <x>10</x>
                <y>10</y>
-               <width>501</width>
-               <height>311</height>
+               <width>751</width>
+               <height>321</height>
               </rect>
              </property>
              <property name="styleSheet">
@@ -435,8 +435,8 @@ background-color: rgb(85, 170, 255);</string>
            <widget class="QPushButton" name="mailconseil">
             <property name="geometry">
              <rect>
-              <x>1010</x>
-              <y>410</y>
+              <x>930</x>
+              <y>460</y>
               <width>71</width>
               <height>27</height>
              </rect>
@@ -798,24 +798,11 @@ color: rgb(0, 0, 0);</string>
              <string/>
             </property>
            </widget>
-           <widget class="QWidget" name="chartViewConseil" native="true">
-            <property name="geometry">
-             <rect>
-              <x>240</x>
-              <y>60</y>
-              <width>321</width>
-              <height>331</height>
-             </rect>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 255, 255);</string>
-            </property>
-           </widget>
            <widget class="QPushButton" name="historique">
             <property name="geometry">
              <rect>
-              <x>840</x>
-              <y>460</y>
+              <x>720</x>
+              <y>410</y>
               <width>101</width>
               <height>27</height>
              </rect>
@@ -832,18 +819,18 @@ background-color: rgb(85, 170, 255);</string>
              <iconset theme="QIcon::ThemeIcon::DocumentPrintPreview"/>
             </property>
            </widget>
-           <widget class="QTextEdit" name="textEditHistorique">
+           <widget class="QLineEdit" name="email">
             <property name="geometry">
              <rect>
-              <x>583</x>
-              <y>410</y>
-              <width>211</width>
-              <height>85</height>
+              <x>732</x>
+              <y>460</y>
+              <width>151</width>
+              <height>29</height>
              </rect>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 255, 255);
-color: rgb(0, 0, 0);</string>
+             <string notr="true">color: rgb(0, 0, 0);
+background-color: rgb(255, 255, 255);</string>
             </property>
            </widget>
           </widget>

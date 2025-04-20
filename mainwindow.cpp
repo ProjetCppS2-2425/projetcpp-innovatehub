@@ -29,19 +29,12 @@
 #include <QtCharts/QLegend>
 #include <QVBoxLayout>
 
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
-#include "smtpclient/smtpclient.h"
-#include "smtpclient/mimemessage.h"
-#include "smtpclient/emailaddress.h"
-#include "smtpclient/mimetext.h"
-#include "smtpclient/mimeattachment.h"
 
-//#include <QNetworkAccessManager>
-//#include <QNetworkRequest>
-//#include <QNetworkReply>
-//#include <QAuthenticator>
-//#include <QMessageBox>
+
+
+#include <QProcess>
+
+
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -56,7 +49,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     // Définir les en-têtes AVANT le select()
-    model->setHeaderData(0, Qt::Horizontal, tr("ID"));
+    model->setHeaderData(0, Qt::Horizontal, tr("IDConseil"));
     model->setHeaderData(1, Qt::Horizontal, tr("Matricule"));
     model->setHeaderData(2, Qt::Horizontal, tr("État"));
     model->setHeaderData(3, Qt::Horizontal, tr("Type"));
@@ -89,7 +82,7 @@ MainWindow::MainWindow(QWidget *parent)
     //ui->tableViewConseil->setColumnHidden(model->fieldIndex("IDCONSEIL"), true);
 
     // Autoriser l'édition par double-clic ou touche Entrée/F2
-   // ui->tableViewConseil->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
+    // ui->tableViewConseil->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
     QItemDelegate *delegate = new QItemDelegate();
     ui->tableViewConseil->setItemDelegateForColumn(7, delegate);  // 4 = colonne Description
 
@@ -112,25 +105,7 @@ MainWindow::MainWindow(QWidget *parent)
     peuplerComboBoxRecherche();    // Connecter les boutons et événements
 
 
-    connect(model, &QSqlTableModel::dataChanged, this, &MainWindow::on_affconseil_clicked);
 
-    connect(ui->ajoutconseil, &QPushButton::clicked, this, &MainWindow::on_ajoutconseil_clicked);
-
-    connect(ui->suppconseil, &QPushButton::clicked, this, &MainWindow::on_suppconseil_clicked);
-
-    connect(ui->editconseil, &QPushButton::clicked, this, &MainWindow::on_editconseil_clicked);
-
-    connect(ui->affconseil, &QPushButton::clicked, this, &MainWindow::on_affconseil_clicked);
-
-    connect(ui->tableViewConseil, &QTableView::clicked, this, &MainWindow::on_tableViewConseil_clicked);
-
-    connect(ui->pdfconseil, &QPushButton::clicked, this, &MainWindow::on_pdfconseil_clicked);
-
-    connect(ui->recherconseil, &QPushButton::clicked, this, &MainWindow::on_recherconseil_clicked);
-
-    connect(ui->trieconseil, &QPushButton::clicked, this, &MainWindow::on_trieconseil_clicked);
-
-    connect(ui->statconseil, &QPushButton::clicked, this, &MainWindow::on_statconseil_clicked);
 
 
 
@@ -204,6 +179,7 @@ void MainWindow::on_ajoutconseil_clicked() {
     ui->dateconseil->setStyleSheet("");
 
 
+
     // Vérification des champs vides
     if (matricule.isEmpty()) {
         QMessageBox::warning(this, "Erreur de saisie", "Le champ 'Matricule' ne peut pas être vide.");
@@ -212,6 +188,13 @@ void MainWindow::on_ajoutconseil_clicked() {
         return;
     }
 
+    // Vérification des champs vides
+    if (Conseil::existe(matricule)) {
+        QMessageBox::warning(this, "Erreur", "Ce matricule existe déjà. Veuillez en saisir un autre.");
+        ui->matricule->setFocus();
+        ui->matricule->setStyleSheet("border: 1px solid red;");
+        return;
+    }
 
     if (etat.isEmpty() || etat == "Sélectionner...") { // Assurez-vous que l'élément par défaut n'est pas sélectionné
         QMessageBox::warning(this, "Erreur de saisie", "Veuillez sélectionner un 'État'.");
@@ -272,11 +255,13 @@ void MainWindow::on_ajoutconseil_clicked() {
     if (newConseil.ajouter()) {
         QMessageBox::information(this, "Succès", "Conseil ajouté avec succès !");
         on_affconseil_clicked();  // Rafraîchir la table
+        viderChamps();
+        ui->ajoutconseil->setFocus();
+
     } else {
         QMessageBox::critical(this, "Erreur", "Échec de l'ajout du conseil.");
     }
 
-    viderChamps();
 
 }
 
@@ -291,7 +276,6 @@ void MainWindow::on_affconseil_clicked()
         // Définir les en-têtes
         newModel->setHeaderData(0, Qt::Horizontal, tr("ID"));
         newModel->setHeaderData(1, Qt::Horizontal, tr("Matricule"));
-        // ... autres colonnes ...
 
         ui->tableViewConseil->setModel(newModel);
 
@@ -429,187 +413,137 @@ void MainWindow::viderChamps() {
 
 }
 
-
-
 void MainWindow::on_pdfconseil_clicked()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, "Exporter en PDF", "", "*.pdf");
-    if (fileName.isEmpty())
-        return;
+    // Liste des types disponibles : traitee, en cours, rejetee, en attente
+    QStringList typesDisponibles = {"traitee", "en cours", "rejetee", "en attente"};
+    QString baseDir = QFileDialog::getExistingDirectory(this, "Choisissez un dossier de sauvegarde");
+    if (baseDir.isEmpty()) return;
 
-    if (QFileInfo(fileName).suffix().isEmpty())
-        fileName.append(".pdf");
+    QStringList headers = {"Matricule", "Type", "Description", "Date"};
+    QVector<int> columnWidths = {200, 200, 500, 250};
+    int columnCount = headers.size();
+    int rowHeight = 45;
+    int headerHeight = 50;
 
-    QPdfWriter pdf(fileName);
-    pdf.setResolution(300); // 300 DPI pour une bonne qualité
-    pdf.setPageMargins(QMarginsF(30, 30, 30, 30)); // Marges de 30 pixels
+    // Fonction pour exporter le PDF
+    auto exporterPDF = [&](const QString &type, const QList<QVector<QString>> &dataRows, const QString &filePath) {
+        QPdfWriter pdf(filePath);
+        pdf.setPageMargins(QMarginsF(30, 30, 30, 30));
+        pdf.setResolution(300);
+        QPainter painter(&pdf);
+        painter.setRenderHint(QPainter::Antialiasing);
 
-    // Taille A4 en pixels (300 DPI)
-    const int pageWidth = pdf.width();
-    const int pageHeight = pdf.height();
+        int pageWidth = pdf.width();
+        int pageHeight = pdf.height();
+        int topMargin = 120;
+        int currentY = 240;
+        int bottomMargin = 80;
+        int tableWidth = std::accumulate(columnWidths.begin(), columnWidths.end(), 0);
+        int tableLeft = (pageWidth - tableWidth) / 2;
 
-    QPainter painter(&pdf);
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    // Paramètres de mise en page
-    const int leftMargin = 100;
-    const int topMargin = 150;
-    const int bottomMargin = 100;
-    int currentY = topMargin;
-
-    // 1. Titre centré en haut de page
-    painter.setFont(QFont("Arial", 20, QFont::Bold));
-    QRect titleRect(0, 50, pageWidth, 60);
-    painter.drawText(titleRect, Qt::AlignCenter, "Rapport détaillé des Conseils");
-    currentY += 100;
-
-    QAbstractItemModel* model = ui->tableViewConseil->model();
-    if (!model || model->rowCount() == 0) {
-        painter.drawText(leftMargin, currentY, "Aucune donnée à afficher");
-        painter.end();
-        return;
-    }
-
-    // Configuration du tableau
-    const int columnCount = model->columnCount();
-    const int rowCount = model->rowCount();
-    const int headerHeight = 50;  // Augmenter la hauteur de l'en-tête
-    const int rowHeight = 50;  // Augmenter la hauteur des lignes
-    const int cellPadding = 10;  // Augmenter le padding des cellules pour plus d'espace
-
-    // Calcul des largeurs de colonnes
-    QVector<int> columnWidths(columnCount);
-    int totalWidth = 0;
-
-    painter.setFont(QFont("Arial", 10, QFont::Bold));
-    for (int col = 0; col < columnCount; ++col) {
-        QString header = model->headerData(col, Qt::Horizontal).toString();
-        columnWidths[col] = painter.fontMetrics().horizontalAdvance(header) + cellPadding * 2;
-
-        // Vérifier la largeur des données
-        painter.setFont(QFont("Arial", 10));
-        for (int row = 0; row < rowCount; ++row) {
-            QString data = model->data(model->index(row, col)).toString();
-            columnWidths[col] = qMax(columnWidths[col],
-                                     painter.fontMetrics().horizontalAdvance(data) + cellPadding * 2);
+        // Ajouter le logo
+        QImage logo("logo.png");
+        if (!logo.isNull()) {
+            painter.drawImage(QRect(0, 0, 250, 250), logo);
         }
 
-        // Largeur minimale de 100 pixels pour plus d'espace
-        columnWidths[col] = qMax(columnWidths[col], 100);
-        totalWidth += columnWidths[col];
-    }
+        // Titre du rapport
+        painter.setFont(QFont("Arial", 16, QFont::Bold));
+        painter.drawText(QRect(0, 150, pageWidth, 60), Qt::AlignCenter, "Rapport des conseils - Type : " + type);
 
-    // Ajuster si trop large
-    if (totalWidth > pageWidth - 2 * leftMargin) {
-        double ratio = (pageWidth - 2 * leftMargin) / (double)totalWidth;
-        for (int col = 0; col < columnCount; ++col) {
-            columnWidths[col] *= ratio;
-        }
-    }
-
-    // Centrer le tableau horizontalement
-    int tableLeft = (pageWidth - totalWidth) / 2;
-
-    // Dessiner l'en-tête du tableau
-    painter.setFont(QFont("Arial", 10, QFont::Bold));
-    painter.setPen(QPen(Qt::black, 1.5));
-    painter.setBrush(QBrush(QColor(70, 130, 180))); // Bleu acier
-
-    int currentX = tableLeft;
-    for (int col = 0; col < columnCount; ++col) {
-        // Rectangle d'en-tête
-        painter.drawRect(currentX, currentY, columnWidths[col], headerHeight);
-
-        // Texte centré
-        QString header = model->headerData(col, Qt::Horizontal).toString();
-        painter.setPen(Qt::white);
-        painter.drawText(currentX, currentY, columnWidths[col], headerHeight,
-                         Qt::AlignCenter, header);
+        // En-tête du tableau
+        painter.setFont(QFont("Arial", 10, QFont::Bold));
+        painter.setBrush(QColor(70, 130, 180));
         painter.setPen(Qt::black);
 
-        currentX += columnWidths[col];
-    }
-    currentY += headerHeight;
-
-    // Dessiner les données du tableau
-    painter.setFont(QFont("Arial", 10));
-    painter.setPen(QPen(Qt::black, 1));
-    painter.setBrush(Qt::NoBrush);
-
-    for (int row = 0; row < rowCount; ++row) {
-        currentX = tableLeft;
-
-        // Dessiner les cellules
-        for (int col = 0; col < columnCount; ++col) {
-            // Alternance de couleurs pour les lignes
-            if (row % 2 == 0) {
-                painter.setBrush(QBrush(QColor(240, 248, 255))); // Alice blue
-            } else {
-                painter.setBrush(QBrush(Qt::white));
-            }
-
-            // Dessiner la cellule
-            painter.drawRect(currentX, currentY, columnWidths[col], rowHeight);
-
-            // Dessiner le texte
-            QString text = model->data(model->index(row, col)).toString();
-            // Formater la date si c'est la colonne DATEE
-            if (model->headerData(col, Qt::Horizontal).toString() == "DATEE") {
-                QDateTime date = QDateTime::fromString(text, Qt::ISODate);
-                text = date.toString("ddd MMM d.yyyy");
-            }
-
-            painter.drawText(currentX + cellPadding, currentY,
-                             columnWidths[col] - 2 * cellPadding, rowHeight,
-                             Qt::AlignLeft | Qt::AlignVCenter, text);
-
-            currentX += columnWidths[col];
+        int currentX = tableLeft;
+        for (int i = 0; i < columnCount; ++i) {
+            painter.drawRect(currentX, currentY, columnWidths[i], headerHeight);
+            painter.setPen(Qt::white);
+            painter.drawText(currentX, currentY, columnWidths[i], headerHeight, Qt::AlignCenter, headers[i]);
+            painter.setPen(Qt::black);
+            currentX += columnWidths[i];
         }
+        currentY += headerHeight;
 
-        currentY += rowHeight;
-
-        // Vérifier si on dépasse la page
-        if (currentY > pageHeight - bottomMargin) {
-            // Ajouter la date en bas de page avant de changer
-            painter.setFont(QFont("Arial", 10));
-            painter.drawText(QRect(0, pageHeight - 50, pageWidth, 30),
-                             Qt::AlignCenter,
-                             "Date de génération du rapport : " + QDate::currentDate().toString("ddd MMM d.yyyy"));
-
-            // Créer une nouvelle page si nécessaire
-            pdf.newPage();
-            currentY = topMargin;
-
-            // Redessiner l'en-tête du tableau sur la nouvelle page
+        // Dessiner les données
+        painter.setFont(QFont("Arial", 9));
+        int rowIndex = 0;
+        for (const QVector<QString>& row : dataRows) {
             currentX = tableLeft;
-            painter.setFont(QFont("Arial", 10, QFont::Bold));
-            painter.setPen(QPen(Qt::black, 1.5));
-            painter.setBrush(QBrush(QColor(70, 130, 180)));
+            painter.setBrush((rowIndex % 2 == 0) ? QColor(245, 245, 245) : Qt::white);
 
-            for (int col = 0; col < columnCount; ++col) {
-                painter.drawRect(currentX, currentY, columnWidths[col], headerHeight);
-                QString header = model->headerData(col, Qt::Horizontal).toString();
-                painter.setPen(Qt::white);
-                painter.drawText(currentX, currentY, columnWidths[col], headerHeight,
-                                 Qt::AlignCenter, header);
-                painter.setPen(Qt::black);
-                currentX += columnWidths[col];
+            for (int i = 0; i < columnCount; ++i) {
+                QString text = row[i];
+                if (headers[i] == "Date") {
+                    QDateTime date = QDateTime::fromString(text, Qt::ISODate);
+                    text = date.toString("dd MMM yyyy");
+                }
+                painter.drawRect(currentX, currentY, columnWidths[i], rowHeight);
+                painter.drawText(currentX + 5, currentY, columnWidths[i] - 10, rowHeight, Qt::AlignLeft | Qt::AlignVCenter, text);
+                currentX += columnWidths[i];
             }
-            currentY += headerHeight;
 
-            painter.setFont(QFont("Arial", 10));
-            painter.setPen(QPen(Qt::black, 1));
+            currentY += rowHeight;
+            rowIndex++;
+
+            // Si on atteint la fin de la page, passer à la page suivante
+            if (currentY + rowHeight + bottomMargin > pageHeight) {
+                painter.drawText(QRect(0, pageHeight - 40, pageWidth, 30),
+                                 Qt::AlignCenter,
+                                 "Date du rapport : " + QDate::currentDate().toString("dd MMM yyyy"));
+                pdf.newPage();
+                currentY = topMargin;
+            }
+        }
+
+        // Footer date
+        painter.setFont(QFont("Arial", 9));
+        painter.drawText(QRect(0, pageHeight - 40, pageWidth, 30),
+                         Qt::AlignCenter,
+                         "Date du rapport : " + QDate::currentDate().toString("dd MMM yyyy"));
+        painter.end();
+    };
+
+    int pdfCount = 0;
+
+    // Pour chaque type de conseil (4 types)
+    for (const QString& type : typesDisponibles) {
+        qDebug() << "Exécution de la requête pour le type:" << type;
+
+        QSqlQuery query;
+        query.prepare("SELECT matricule, type, description, datee FROM conseil WHERE type = :type");
+        query.bindValue(":type", type);
+        if (!query.exec()) {
+            qDebug() << "Erreur d'exécution de la requête:" << query.lastError();
+            continue;
+        }
+
+        QList<QVector<QString>> rows;
+        while (query.next()) {
+            QVector<QString> row;
+            for (int i = 0; i < columnCount; ++i)
+                row.append(query.value(i).toString());
+            rows.append(row);
+        }
+
+        qDebug() << "Nombre de lignes pour le type" << type << ":" << rows.size();
+
+        // Si des lignes ont été récupérées, générer le PDF
+        if (!rows.isEmpty()) {
+            QString fileName = baseDir + "/rapport_" + type + ".pdf";
+            qDebug() << "Génération du fichier PDF pour le type:" << type << "fichier:" << fileName;
+            exporterPDF(type, rows, fileName);
+            pdfCount++;
         }
     }
 
-    // Date en bas de la dernière page
-    painter.setFont(QFont("Arial", 10));
-    painter.drawText(QRect(0, pageHeight - 50, pageWidth, 30),
-                     Qt::AlignCenter,
-                     "Date de génération du rapport : " + QDate::currentDate().toString("ddd MMM d.yyyy"));
-
-    painter.end();
-    QMessageBox::information(this, "Export PDF", "Le rapport a été généré avec succès !");
+    // Vérification du nombre de fichiers générés
+    if (pdfCount == 0)
+        QMessageBox::information(this, "Information", "Aucun rapport PDF n’a été généré (aucune donnée).");
+    else
+        QMessageBox::information(this, "Succès", QString("%1 rapport(s) PDF ont été générés !").arg(pdfCount));
 }
 
 
@@ -718,41 +652,47 @@ void MainWindow::on_recherconseil_clicked()
 
 void MainWindow::on_trieconseil_clicked()
 {
-    QString critere = ui->triconcob->currentText();  // ex: "tarif", "date", "type"
+    QString critere = ui->triconcob->currentText();
     QString requete;
 
-    // Construction de la requête SQL en fonction du critère choisi
+    // Écris les colonnes dans l'ordre souhaité (pas de SELECT *)
+    QString colonnes = "IDCONSEIL, MATRICULE, ETAT, TYPE, TARIF, DESCRIPTION, DATEE";
+
     if (critere == "Tarif") {
-        requete = "SELECT * FROM conseil ORDER BY tarif ASC";
+        requete = "SELECT " + colonnes + " FROM conseil ORDER BY tarif ASC";
     } else if (critere == "Date") {
-        requete = "SELECT * FROM conseil ORDER BY datee ASC";
+        requete = "SELECT " + colonnes + " FROM conseil ORDER BY datee ASC";
     } else if (critere == "Type") {
-        requete = "SELECT * FROM conseil ORDER BY type ASC";
+        requete = "SELECT " + colonnes + " FROM conseil ORDER BY type ASC";
     } else {
-        // Par défaut, on trie par ID
-        requete = "SELECT * FROM conseil ORDER BY id ASC";
+        requete = "SELECT " + colonnes + " FROM conseil ORDER BY IDCONSEIL ASC";
     }
 
-    // Création et configuration du modèle
-    QSqlQueryModel *model = new QSqlQueryModel();
-    model->setQuery(requete);
+    QSqlQueryModel *modelTrie = new QSqlQueryModel();
+    modelTrie->setQuery(requete);
 
-    if (model->lastError().isValid()) {
-        QMessageBox::critical(this, "Erreur SQL", model->lastError().text());
+    if (modelTrie->lastError().isValid()) {
+        QMessageBox::critical(this, "Erreur SQL", modelTrie->lastError().text());
         return;
     }
 
-    // Lier le modèle à la table view
-    ui->tableViewConseil->setModel(model);
+    // Définir les bons en-têtes
+    modelTrie->setHeaderData(0, Qt::Horizontal, "ID");
+    modelTrie->setHeaderData(1, Qt::Horizontal, "Matricule");
+    modelTrie->setHeaderData(2, Qt::Horizontal, "État");
+    modelTrie->setHeaderData(3, Qt::Horizontal, "Type");
+    modelTrie->setHeaderData(4, Qt::Horizontal, "Tarif");
+    modelTrie->setHeaderData(5, Qt::Horizontal, "Description");
+    modelTrie->setHeaderData(6, Qt::Horizontal, "Date");
+
+    ui->tableViewConseil->setModel(modelTrie);
 }
 
 
 
 void MainWindow::on_statconseil_clicked()
 {
-    // Créer les données pour le graphique circulaire basé sur le type des conseils
     QPieSeries *series = new QPieSeries();
-
     QSqlQuery query;
     if (query.exec("SELECT type, COUNT(*) FROM conseil GROUP BY type")) {
         while (query.next()) {
@@ -772,150 +712,170 @@ void MainWindow::on_statconseil_clicked()
         return;
     }
 
-    // Créer le graphique
+    // Création du graphique
     QChart *chart = new QChart();
     chart->addSeries(series);
     chart->setTitle("Répartition des conseils par type");
     chart->legend()->setAlignment(Qt::AlignBottom);
     chart->setAnimationOptions(QChart::SeriesAnimations);
 
-    // **Label Adjustments (Prioritize these)**
     for (QPieSlice *slice : series->slices()) {
         slice->setLabelVisible();
-        // **Try setting the label position to "outside"**
         slice->setLabelPosition(QPieSlice::LabelOutside);
         slice->setLabel(QString("%1 (%2%)").arg(slice->label()).arg(QString::number(100.0 * slice->percentage(), 'f', 1)));
-    }
-
-    // **Adjust Chart Margins (Give more space around the pie)**
-    chart->layout()->setContentsMargins(10, 10, 10, 10); // Increase the margins
-
-    // **Reduce Label Font Size (If outside positioning isn't enough)**
-    QFont font = chart->legend()->font();
-    font.setPointSize(5); // Try a smaller font size
-    chart->legend()->setFont(font);
-
-    for (QPieSlice *slice : series->slices()) {
         QFont sliceFont = slice->labelFont();
-        sliceFont.setPointSize(5); // Try a smaller font size
+        sliceFont.setPointSize(6);
         slice->setLabelFont(sliceFont);
     }
 
-    // Créer la vue du graphique
+    chart->layout()->setContentsMargins(10, 10, 10, 10);
+
+    QFont font = chart->legend()->font();
+    font.setPointSize(7);
+    chart->legend()->setFont(font);
+
+    // Création de la vue du graphique
     QChartView *chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
 
-    // **Increase the fixed size of the widget (Give more overall space)**
-   // QSize fixedSize(700, 500); // Try larger dimensions
-    //ui->chartViewConseil->setFixedSize(fixedSize);
+    //  Création d'une nouvelle fenêtre (QDialog)
+    QDialog *dialog = new QDialog(this);
+    dialog->setWindowTitle("Statistiques des conseils");
+    dialog->resize(700, 500);
 
-    // Nettoyer l'ancien layout
-    QLayout *oldLayout = ui->chartViewConseil->layout();
-    if (oldLayout) {
-        QLayoutItem *item;
-        while ((item = oldLayout->takeAt(0)) != nullptr) {
-            delete item->widget();
-            delete item;
-        }
-        delete oldLayout;
-    }
-
-    // Nouveau layout
-    QVBoxLayout *layout = new QVBoxLayout(ui->chartViewConseil);
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
     layout->addWidget(chartView);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(0);
+    dialog->setLayout(layout);
 
-    // Afficher la page
-    ui->chartViewConseil->setLayout(layout);
+    dialog->exec(); // Utiliser show() si tu veux que ce soit non modal
 }
+
 
 
 void MainWindow::on_historique_clicked()
 {
-    Conseil conseil;
-    QSqlQueryModel *model = conseil.afficher(); // récupère tous les conseils
-
-    if (!model || model->rowCount() == 0) {
-        QMessageBox::information(this, "Historique", "Aucun conseil trouvé.");
+    QSqlQuery query;
+    if (!query.exec("SELECT idconseil, matricule, etat, description, datee FROM conseil WHERE type = 'traitee'")) {
+        QMessageBox::critical(this, "Erreur", "Erreur lors de la récupération des conseils traités : " + query.lastError().text());
         return;
     }
 
     QString historique;
 
-    // Parcourir les lignes du modèle
-    for (int row = 0; row < model->rowCount(); ++row) {
-        QString id = model->data(model->index(row, 0)).toString();         // colonne 0 : ID
-        QString type = model->data(model->index(row, 1)).toString();       // colonne 1 : Type
-        QString description = model->data(model->index(row, 2)).toString();// colonne 2 : Description
-        QString date = model->data(model->index(row, 3)).toString();       // colonne 3 : Date (si elle existe)
+    while (query.next()) {
+        QString matricule = query.value(1).toString();
+        QString etat = query.value(2).toString();
+        QString description = query.value(3).toString();
+        QString datee = query.value(4).toString();
 
-        historique += QString("🔹 ID: %1\nType: %2\nDescription: %3\nDate: %4\n\n")
-                          .arg(id, type, description, date);
+        historique += QString("🔹 Matricule: %1\nÉtat: %2\nDescription: %3\nDate: %4\n\n")
+                          .arg(matricule, etat, description, datee);
     }
 
-    ui->textEditHistorique->setPlainText(historique);
+    if (historique.isEmpty()) {
+        QMessageBox::information(this, "Historique", "Aucun conseil traité trouvé.");
+        return;
+    }
+
+    // Affichage dans une fenêtre modale
+    QDialog *dialog = new QDialog(this);
+    dialog->setWindowTitle("Historique des conseils traités");
+    dialog->resize(600, 400);
+
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QTextEdit *textEdit = new QTextEdit(dialog);
+    textEdit->setReadOnly(true);
+    textEdit->setPlainText(historique);
+
+    layout->addWidget(textEdit);
+    dialog->setLayout(layout);
+    dialog->exec();
+
+    // Sauvegarde dans un fichier texte
+    QFile file("historique_conseils.txt");
+    if (file.open(QIODevice::Append | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << historique;
+        file.close();
+    } else {
+        QMessageBox::warning(this, "Erreur", "Impossible d'écrire dans le fichier historique_conseils.txt");
+    }
+
+    // ❌ Suppression désactivée
+    /*
+    QSqlQuery deleteQuery;
+    for (const QString &idconseil : idsASupprimer) {
+        deleteQuery.prepare("DELETE FROM conseil WHERE idconseil = :idconseil");
+        deleteQuery.bindValue(":idconseil", idconseil);
+        if (!deleteQuery.exec()) {
+            QMessageBox::warning(this, "Erreur de suppression", "Impossible de supprimer le conseil ID " + idconseil + " : " + deleteQuery.lastError().text());
+        }
+    }
+    */
+
+    QMessageBox::information(this, "Succès", "Historique généré avec succès. Les conseils restent enregistrés.");
 }
 
 
-/*void MainWindow::on_mailconseil_clicked() {
-    // Paramètres SMTP
-    QString smtpServer = "smtp.gmail.com";  // Utilisez le serveur SMTP de votre fournisseur
-    int smtpPort = 587;  // Port pour TLS
-    QString fromEmail = "votre_email@gmail.com";  // Votre email
-    QString toEmail = "destinataire@example.com";  // Destinataire
-    QString subject = "Sujet de l'email";
-    QString body = "Voici le corps de l'email.";
-    QString attachmentFile = "chemin/vers/le/fichier.pdf"; // Si vous avez un fichier joint
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QUrl>
+#include <QMessageBox>
+#include <QRegularExpression>
 
-    // Préparer le corps du message
-    QByteArray emailData;
-    emailData.append("From: " + fromEmail.toUtf8() + "\r\n");
-    emailData.append("To: " + toEmail.toUtf8() + "\r\n");
-    emailData.append("Subject: " + subject.toUtf8() + "\r\n");
-    emailData.append("\r\n");  // Séparation entre en-tête et corps
-    emailData.append(body.toUtf8());
 
-    // Ajouter une pièce jointe, si nécessaire
-    if (!attachmentFile.isEmpty()) {
-        QFile file(attachmentFile);
-        if (file.open(QIODevice::ReadOnly)) {
-            QByteArray fileData = file.readAll();
-            file.close();
-            emailData.append("\r\n--boundary\r\n");
-            emailData.append("Content-Type: application/pdf; name=\"" + QFileInfo(attachmentFile).fileName().toUtf8() + "\"\r\n");
-            emailData.append("Content-Disposition: attachment; filename=\"" + QFileInfo(attachmentFile).fileName().toUtf8() + "\"\r\n");
-            emailData.append("Content-Transfer-Encoding: base64\r\n");
-            emailData.append("\r\n");
-            emailData.append(fileData.toBase64());
-        }
+void MainWindow::on_mailconseil_clicked()
+{
+    QString recipient = ui->email->text();
+
+    if (recipient.isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Veuillez saisir l'adresse email du destinataire.");
+        return;
     }
 
-    // Créer une requête SMTP
+    QRegularExpression emailRegex("^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$");
+    if (!emailRegex.match(recipient).hasMatch()) {
+        QMessageBox::warning(this, "Erreur", "L'adresse email saisie est invalide.");
+        return;
+    }
+
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-    QUrl url("smtp://" + smtpServer + ":" + QString::number(smtpPort));
+    QUrl url("https://api.mailersend.com/v1/email");
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "text/plain");
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer mlsn.c7ae544628196623acd63c7f9a71409087af39fd7c362ab1cc607e754e961115"); // ⚠️ Remplacez
 
-    // Authentification SMTP (si nécessaire)
-    QAuthenticator *authenticator = new QAuthenticator();
-    authenticator->setUser("votre_email@gmail.com");  // Votre email
-    authenticator->setPassword("votre_mot_de_passe");  // Votre mot de passe
-    manager->authenticationRequired.connect([=](QNetworkReply *reply, QAuthenticator *auth) {
-        auth->setUser("votre_email@gmail.com");
-        auth->setPassword("votre_mot_de_passe");
-    });
+    // Construire l'objet JSON
+    QJsonObject fromObj;
+    fromObj["email"] = " syrinechakroun99@gmail.com";
+    fromObj["name"] = "Qt Application";
 
-    // Envoyer la requête
-    QNetworkReply *reply = manager->post(request, emailData);
+    QJsonObject toObj;
+    toObj["email"] = recipient;
 
-    // Connexion au signal de réponse
-    connect(reply, &QNetworkReply::finished, [reply]() {
+    QJsonArray toArray;
+    toArray.append(toObj);
+
+    QJsonObject content;
+    content["from"] = fromObj;
+    content["to"] = toArray;
+    content["subject"] = "Test Email depuis Qt via Mailersend";
+    content["text"] = "Bonjour, ceci est un test d'email via Mailersend depuis Qt.";
+
+    QJsonDocument jsonDoc(content);
+    QByteArray postData = jsonDoc.toJson();
+
+    QNetworkReply *reply = manager->post(request, postData);
+
+    connect(reply, &QNetworkReply::finished, this, [reply]() {
         if (reply->error() == QNetworkReply::NoError) {
-            QMessageBox::information(nullptr, "Succès", "L'email a été envoyé avec succès.");
+            QMessageBox::information(nullptr, "Succès", "Email envoyé avec succès via Mailersend !");
         } else {
-            QMessageBox::warning(nullptr, "Erreur", "Erreur lors de l'envoi de l'email : " + reply->errorString());
+            QMessageBox::critical(nullptr, "Erreur", "Erreur lors de l'envoi : " + reply->errorString());
         }
         reply->deleteLater();
     });
-}*/
+}

@@ -44,6 +44,7 @@ public:
     bool supprimer(int idConseil);
     bool update();
     void rechercher(QTableView *table, QString cas);
+    static bool existe(QString matricule);
 
 };
 

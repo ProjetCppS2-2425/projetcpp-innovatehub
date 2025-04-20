@@ -1,1 +1,0 @@
-// Placeholder for mimetext.h

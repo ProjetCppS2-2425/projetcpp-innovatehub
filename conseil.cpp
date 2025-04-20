@@ -38,6 +38,21 @@ bool Conseil::ajouter()
 }
 
 
+bool Conseil::existe(QString matricule) {
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) FROM conseil WHERE matricule = :matricule");
+    query.bindValue(":matricule", matricule);
+
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt() > 0;  // retourne true si au moins un matricule existe
+    } else {
+        qDebug() << "Erreur lors de la vérification d’unicité du matricule:" << query.lastError();
+    }
+
+    return false;
+}
+
+
 
 QSqlQueryModel* Conseil::afficher() {
     QSqlQueryModel *model = new QSqlQueryModel;

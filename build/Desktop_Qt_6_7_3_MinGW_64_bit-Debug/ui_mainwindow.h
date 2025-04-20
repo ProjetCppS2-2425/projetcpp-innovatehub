@@ -32,7 +32,6 @@
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTableWidget>
-#include <QtWidgets/QTextEdit>
 #include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -81,9 +80,8 @@ public:
     QPushButton *affconseil;
     QLineEdit *dateconseil;
     QLineEdit *lineEditRecherche;
-    QWidget *chartViewConseil;
     QPushButton *historique;
-    QTextEdit *textEditHistorique;
+    QLineEdit *email;
     QWidget *tab_5;
     QWidget *page_2;
     QTabWidget *tabWidget_2;
@@ -409,11 +407,11 @@ public:
         ajoutconseil->setIcon(icon);
         metconseil = new QWidget(groupBox);
         metconseil->setObjectName("metconseil");
-        metconseil->setGeometry(QRect(570, 50, 511, 351));
+        metconseil->setGeometry(QRect(290, 50, 791, 351));
         metconseil->setStyleSheet(QString::fromUtf8("background-color: rgb(255, 255, 255);"));
         tableViewConseil = new QTableView(metconseil);
         tableViewConseil->setObjectName("tableViewConseil");
-        tableViewConseil->setGeometry(QRect(10, 10, 501, 311));
+        tableViewConseil->setGeometry(QRect(10, 10, 751, 321));
         tableViewConseil->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
 "border-color: rgb(85, 170, 255);\n"
 "\n"
@@ -472,7 +470,7 @@ public:
         statconseil->setIcon(icon4);
         mailconseil = new QPushButton(groupBox);
         mailconseil->setObjectName("mailconseil");
-        mailconseil->setGeometry(QRect(1010, 410, 71, 27));
+        mailconseil->setGeometry(QRect(930, 460, 71, 27));
         mailconseil->setStyleSheet(QString::fromUtf8("color: rgb(255, 255, 255);\n"
 "font: 10pt \"Arial\" solid;\n"
 "background-color: rgb(85, 170, 255);"));
@@ -605,23 +603,19 @@ public:
         lineEditRecherche->setGeometry(QRect(610, 0, 111, 29));
         lineEditRecherche->setStyleSheet(QString::fromUtf8("background-color: rgb(255, 255, 255);\n"
 "color: rgb(0, 0, 0);"));
-        chartViewConseil = new QWidget(groupBox);
-        chartViewConseil->setObjectName("chartViewConseil");
-        chartViewConseil->setGeometry(QRect(240, 60, 321, 331));
-        chartViewConseil->setStyleSheet(QString::fromUtf8("background-color: rgb(255, 255, 255);"));
         historique = new QPushButton(groupBox);
         historique->setObjectName("historique");
-        historique->setGeometry(QRect(840, 460, 101, 27));
+        historique->setGeometry(QRect(720, 410, 101, 27));
         historique->setStyleSheet(QString::fromUtf8("color: rgb(255, 255, 255);\n"
 "font: 10pt \"Arial\" solid;\n"
 "background-color: rgb(85, 170, 255);"));
         QIcon icon9(QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview));
         historique->setIcon(icon9);
-        textEditHistorique = new QTextEdit(groupBox);
-        textEditHistorique->setObjectName("textEditHistorique");
-        textEditHistorique->setGeometry(QRect(583, 410, 211, 85));
-        textEditHistorique->setStyleSheet(QString::fromUtf8("background-color: rgb(255, 255, 255);\n"
-"color: rgb(0, 0, 0);"));
+        email = new QLineEdit(groupBox);
+        email->setObjectName("email");
+        email->setGeometry(QRect(732, 460, 151, 29));
+        email->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
+"background-color: rgb(255, 255, 255);"));
         tabWidget->addTab(tab_4, QString());
         tab_5 = new QWidget();
         tab_5->setObjectName("tab_5");
