@@ -1,4 +1,4 @@
-QT       += core gui sql charts network
+QT       += core gui sql charts network serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -14,7 +14,8 @@ SOURCES += \
     transaction.cpp \
     connection.cpp \
     chatbot_dialog.cpp \
-    openai_chatbot.cpp
+    openai_chatbot.cpp \
+    arduino.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -23,7 +24,8 @@ HEADERS += \
     apikeys.h \
     regexp_compat.h \
     chatbot_dialog.h \
-    openai_chatbot.h
+    openai_chatbot.h \
+    arduino.h
 
 FORMS += \
     mainwindow.ui

@@ -3134,7 +3134,7 @@ color: rgb(255, 255, 255);
 selection-background-color: rgb(255, 255, 255);</string>
            </property>
            <property name="currentIndex">
-            <number>0</number>
+            <number>1</number>
            </property>
            <widget class="QWidget" name="tab_9">
             <attribute name="title">
@@ -3780,6 +3780,21 @@ gridline-color: rgb(46, 46, 93);</string>
                <string>ChatBot</string>
               </property>
              </widget>
+            </widget>
+           </widget>
+           <widget class="QWidget" name="tab_7">
+            <attribute name="title">
+             <string>Page</string>
+            </attribute>
+            <widget class="QTextBrowser" name="teaxtBrowser_transaction">
+             <property name="geometry">
+              <rect>
+               <x>270</x>
+               <y>50</y>
+               <width>431</width>
+               <height>261</height>
+              </rect>
+             </property>
             </widget>
            </widget>
           </widget>
