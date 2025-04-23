@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QSqlQuery>
+#include <QTimer>
 
 Arduino::Arduino(QObject *parent) : QObject(parent), outputWidget(nullptr)
 {
@@ -107,8 +108,14 @@ void Arduino::processMessage(const QString &message)
             updateTransactionDisplay(idEmploye, true, poste);
             emit accessGranted(idEmploye, poste);
             
-            // Send command to Arduino to open door
-            serialPort->write("OPEN_DOOR\n");
+            // Send command to Arduino to turn on LED
+            serialPort->write("LED_ON\n");
+            // Turn off LED after 3 seconds
+            QTimer::singleShot(3000, this, [this]() {
+                if (serialPort->isOpen()) {
+                    serialPort->write("LED_OFF\n");
+                }
+            });
         } else {
             storeAccessLog(idEmploye, false);
             updateTransactionDisplay(idEmploye, false);
