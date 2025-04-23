@@ -1,31 +1,31 @@
-QT += core gui widgets sql charts
-QT += charts
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-QT += network
+QT += core gui widgets sql charts serialport network
 
+# Utiliser C++17 pour compatibilité moderne
 CONFIG += c++17
 
+# Dossiers d'includes personnalisés (facultatif)
 INCLUDEPATH += $$PWD
-# INCLUDEPATH += /chemin/vers/mes/includes  ← Décommente cette ligne si tu as des includes personnalisés
 
+# Fichiers sources .cpp
 SOURCES += \
-    connection.cpp \
-    conseil.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    arduino.cpp \
+    connection.cpp \
+    conseil.cpp
 
+# Fichiers d'en-têtes .h
 HEADERS += \
+    mainwindow.h \
+    arduino.h \
     connection.h \
-    conseil.h \
-    mainwindow.h
+    conseil.h
 
+# Interfaces graphiques .ui
 FORMS += \
     mainwindow.ui
 
-# Deployment rules
+# Déploiement (optionnel)
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
-
-# Compilation flags
-QMAKE_CXXFLAGS += -DDEFINE_NAME

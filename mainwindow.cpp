@@ -28,6 +28,7 @@
 #include <QtCharts/QChart>
 #include <QtCharts/QLegend>
 #include <QVBoxLayout>
+#include "arduino.h"
 
 
 
@@ -647,6 +648,16 @@ void MainWindow::on_recherconseil_clicked()
     ui->tableViewConseil->horizontalHeader()->setStretchLastSection(true);
 
     connect(modelRecherche, &QSqlQueryModel::destroyed, modelRecherche, &QObject::deleteLater);
+    if (modelRecherche->rowCount() > 0) {
+        QString matricule = modelRecherche->data(modelRecherche->index(0, 1)).toString(); // colonne 1 = MATRICULE
+        Arduino arduino;
+        if (!arduino.envoyerTexte(matricule)) {
+            qDebug() << "Erreur Arduino:" << arduino.getLastError();
+        } else {
+            qDebug() << "Matricule envoyé à l'Arduino :" << matricule;
+        }
+    }
+
 }
 
 

@@ -81,7 +81,6 @@ public:
     QLineEdit *dateconseil;
     QLineEdit *lineEditRecherche;
     QPushButton *historique;
-    QLineEdit *email;
     QWidget *tab_5;
     QWidget *page_2;
     QTabWidget *tabWidget_2;
@@ -470,7 +469,7 @@ public:
         statconseil->setIcon(icon4);
         mailconseil = new QPushButton(groupBox);
         mailconseil->setObjectName("mailconseil");
-        mailconseil->setGeometry(QRect(930, 460, 71, 27));
+        mailconseil->setGeometry(QRect(630, 410, 71, 27));
         mailconseil->setStyleSheet(QString::fromUtf8("color: rgb(255, 255, 255);\n"
 "font: 10pt \"Arial\" solid;\n"
 "background-color: rgb(85, 170, 255);"));
@@ -611,11 +610,6 @@ public:
 "background-color: rgb(85, 170, 255);"));
         QIcon icon9(QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview));
         historique->setIcon(icon9);
-        email = new QLineEdit(groupBox);
-        email->setObjectName("email");
-        email->setGeometry(QRect(732, 460, 151, 29));
-        email->setStyleSheet(QString::fromUtf8("color: rgb(0, 0, 0);\n"
-"background-color: rgb(255, 255, 255);"));
         tabWidget->addTab(tab_4, QString());
         tab_5 = new QWidget();
         tab_5->setObjectName("tab_5");
