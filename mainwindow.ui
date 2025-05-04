@@ -3786,14 +3786,17 @@ gridline-color: rgb(46, 46, 93);</string>
             <attribute name="title">
              <string>Page</string>
             </attribute>
-            <widget class="QTextBrowser" name="teaxtBrowser_transaction">
+            <widget class="QPushButton" name="pushButton_6_arduino_2">
              <property name="geometry">
               <rect>
-               <x>270</x>
-               <y>50</y>
-               <width>431</width>
-               <height>261</height>
+               <x>280</x>
+               <y>160</y>
+               <width>83</width>
+               <height>29</height>
               </rect>
+             </property>
+             <property name="text">
+              <string>PushButton</string>
              </property>
             </widget>
            </widget>

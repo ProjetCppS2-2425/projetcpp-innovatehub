@@ -17,6 +17,7 @@
 #include <QRegularExpression>
 #include <QTimer>
 #include "chatbot_dialog.h"
+#include "arduino.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -82,6 +83,17 @@ private slots:
     void on_pushButton_6_transaction_clicked();
     void setOpenAIApiKey(const QString &apiKey);
 
+    void testArduinoConnection();
+    void testManualCardInput();
+    void on_pushButton_6_arduino_2_clicked();
+    
+    // New slots for Arduino events
+    void onArduinoCardDetected(const QString &cardID);
+    void onArduinoAccessGranted(const QString &cardID);
+    void onArduinoAccessDenied(const QString &cardID);
+    void onArduinoDoorStatusChanged(const QString &status);
+    void onArduinoConnectionStatusChanged(bool connected);
+
 private:
     Ui::MainWindow *ui;
     QMap<QPushButton*, int> pageMap;
@@ -97,5 +109,8 @@ private:
 
     QNetworkAccessManager *networkManager;
     ChatbotDialog *chatbotDialog;
+    
+    // Arduino instance
+    Arduino *arduino;
 };
 #endif // MAINWINDOW_H

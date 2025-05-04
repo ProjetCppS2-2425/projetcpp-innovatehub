@@ -65,12 +65,17 @@
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QPieSlice>
 
+#include <QSerialPort>
+#include <QSerialPortInfo>
+#include <QMessageBox>
+#include <QThread>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , networkManager(new QNetworkAccessManager(this))
     , chatbotDialog(nullptr)
+    , arduino(new Arduino(this))
 {
     ui->setupUi(this);
     
@@ -117,7 +122,44 @@ MainWindow::MainWindow(QWidget *parent)
     // Rafraîchir la table des transactions
     refreshTransactionTable();
     
+    // Connect Arduino signals to slots
+    connect(arduino, &Arduino::cardDetected, this, &MainWindow::onArduinoCardDetected);
+    connect(arduino, &Arduino::accessGranted, this, &MainWindow::onArduinoAccessGranted);
+    connect(arduino, &Arduino::accessDenied, this, &MainWindow::onArduinoAccessDenied);
+    connect(arduino, &Arduino::doorStatusChanged, this, &MainWindow::onArduinoDoorStatusChanged);
+    connect(arduino, &Arduino::connectionStatusChanged, this, &MainWindow::onArduinoConnectionStatusChanged);
+    
+    // Connect pushButton_6_arduino_2 to Arduino connection test function
+    connect(ui->pushButton_6_arduino_2, &QPushButton::clicked, this, &MainWindow::on_pushButton_6_arduino_2_clicked);
+    
+    // Add manual card test button if it exists
+    if (ui->pushButton_6_arduino_2) {
+        connect(ui->pushButton_6_arduino_2, &QPushButton::clicked, this, &MainWindow::testManualCardInput);
+    } else {
+        // Create a manual card test button if it doesn't exist
+        QPushButton *manualCardButton = new QPushButton("Test RFID Card", this);
+        ui->statusbar->addPermanentWidget(manualCardButton);
+        connect(manualCardButton, &QPushButton::clicked, this, &MainWindow::testManualCardInput);
+        qDebug() << "Added manual card test button to status bar";
+    }
+    
     qDebug() << "=== Fin de l'initialisation de MainWindow ===";
+    
+    // Try to auto-connect to Arduino if available ports exist
+    QStringList ports = arduino->getAvailablePorts();
+    if (!ports.isEmpty()) {
+        QString portToUse = ports.first();
+        qDebug() << "Attempting to auto-connect to Arduino on port:" << portToUse;
+        if (arduino->connectToArduino(portToUse)) {
+            qDebug() << "Auto-connected to Arduino successfully on port:" << portToUse;
+            QMessageBox::information(this, "Arduino Connection", 
+                                   QString("Successfully connected to Arduino on port %1").arg(portToUse));
+        } else {
+            qDebug() << "Failed to auto-connect to Arduino on port:" << portToUse;
+        }
+    } else {
+        qDebug() << "No Arduino ports available for auto-connection";
+    }
 }
 
 void MainWindow::setupTransactionValidators()
@@ -1715,11 +1757,11 @@ void MainWindow::on_pushButton_transaction_editClient_clicked()
 
 void MainWindow::on_pushButton_6_transaction_clicked()
 {
-    if (!chatbotDialog) {
-        chatbotDialog = new ChatbotDialog(this);
-    }
-    chatbotDialog->show();
-    chatbotDialog->activateWindow();
+    // This is the implementation for the button related to transactions
+    QMessageBox::information(this, "Transaction", "Fonction de transaction activée.");
+    
+    // You may want to implement the actual functionality here
+    // For example, open a transaction dialog or perform a transaction operation
 }
 
 void MainWindow::setOpenAIApiKey(const QString &apiKey)
@@ -1733,3 +1775,184 @@ void MainWindow::setOpenAIApiKey(const QString &apiKey)
         chatbotDialog = nullptr;
     }
 }
+
+
+void MainWindow::testArduinoConnection()
+{
+    // Get available serial ports
+    QStringList availablePorts = arduino->getAvailablePorts();
+    qDebug() << "Available ports:";
+    for (const QString &portName : availablePorts) {
+        qDebug() << "Port:" << portName;
+    }
+    
+    if (availablePorts.isEmpty()) {
+        QMessageBox::warning(this, "No Ports", "No serial ports found. Please connect Arduino and try again.");
+        return;
+    }
+    
+    // If already connected, disconnect first
+    if (arduino->isConnected()) {
+        arduino->disconnectFromArduino();
+        qDebug() << "Disconnected from previous Arduino connection";
+    }
+    
+    // Show port selection dialog
+    bool ok;
+    QString selectedPort = QInputDialog::getItem(this, "Select Port", 
+                                              "Choose Arduino port:", 
+                                              availablePorts, 0, false, &ok);
+    if (!ok || selectedPort.isEmpty()) {
+        qDebug() << "Port selection canceled";
+        return;
+    }
+    
+    // Connect to selected port
+    if (arduino->connectToArduino(selectedPort)) {
+        qDebug() << "Connected to Arduino on port" << selectedPort;
+        
+        // Send test command
+        arduino->sendCommand("TEST");
+        qDebug() << "Test command sent to Arduino";
+        
+        QMessageBox::information(this, "Connection Test", 
+                               QString("Successfully connected to Arduino on port %1.\n"
+                                     "Test command sent.").arg(selectedPort));
+    } else {
+        QMessageBox::critical(this, "Connection Failed", 
+                             QString("Could not connect to Arduino on port %1.\n"
+                                   "Verify Arduino is connected properly and not in use by another application.").arg(selectedPort));
+    }
+}
+
+void MainWindow::on_pushButton_6_arduino_2_clicked()
+{
+    testArduinoConnection();
+}
+
+// Arduino signal handlers
+void MainWindow::onArduinoCardDetected(const QString &cardID)
+{
+    qDebug() << "RFID Card Detected:" << cardID;
+    QMessageBox::information(this, "RFID Card", QString("Card detected: %1").arg(cardID));
+}
+
+void MainWindow::onArduinoAccessGranted(const QString &cardID)
+{
+    qDebug() << "Access GRANTED for card:" << cardID;
+    QMessageBox::information(this, "Access Granted", 
+                           QString("Access granted for card ID: %1\nDoor opening...").arg(cardID));
+}
+
+void MainWindow::onArduinoAccessDenied(const QString &cardID)
+{
+    qDebug() << "Access DENIED for card:" << cardID;
+    QMessageBox::warning(this, "Access Denied", 
+                        QString("Access denied for card ID: %1\nUnauthorized access attempt.").arg(cardID));
+}
+
+void MainWindow::onArduinoDoorStatusChanged(const QString &status)
+{
+    qDebug() << "Door status changed:" << status;
+    QMessageBox::information(this, "Door Status", QString("Door is now: %1").arg(status));
+}
+
+void MainWindow::onArduinoConnectionStatusChanged(bool connected)
+{
+    qDebug() << "Arduino connection status changed:" << (connected ? "Connected" : "Disconnected");
+    if (connected) {
+        QMessageBox::information(this, "Arduino Connected", "Arduino is now connected");
+    } else {
+        QMessageBox::warning(this, "Arduino Disconnected", "Arduino connection has been lost");
+    }
+}
+
+void MainWindow::testManualCardInput()
+{
+    if (!arduino->isConnected()) {
+        QMessageBox::warning(this, "Arduino Not Connected", 
+                          "Arduino is not connected. Please connect first using the Test Arduino button.");
+        return;
+    }
+    
+    // Option for testing a single card ID
+    QStringList options = {"Test Single Card ID", "Test Multiple Card IDs"};
+    bool ok;
+    QString selected = QInputDialog::getItem(this, "RFID Test Options", 
+                                         "Choose test method:", 
+                                         options, 0, false, &ok);
+    
+    if (!ok) return;
+    
+    if (selected == "Test Single Card ID") {
+        // Original single ID test
+        QString cardID = QInputDialog::getText(this, "Manual Card Test", 
+                                           "Enter employee card ID to test:", 
+                                           QLineEdit::Normal, "", &ok);
+        
+        if (ok && !cardID.isEmpty()) {
+            qDebug() << "Manual card ID entered:" << cardID;
+            arduino->manualCardInput(cardID);
+        }
+    } else {
+        // Test multiple IDs including the Arduino hardcoded UID
+        QStringList testIds = {"33EDF734", "1001", "1002", "1003", "1004", "1005", 
+                              "2001", "2002", "2003", "2004", "2005",
+                              "3001", "3002", "3003", "3004", "3005"};
+        
+        QDialog* testDialog = new QDialog(this);
+        testDialog->setWindowTitle("RFID ID Test Results");
+        testDialog->setMinimumWidth(400);
+        
+        QVBoxLayout* layout = new QVBoxLayout(testDialog);
+        QLabel* label = new QLabel("Testing employee IDs...", testDialog);
+        layout->addWidget(label);
+        
+        QTextEdit* resultsText = new QTextEdit(testDialog);
+        resultsText->setReadOnly(true);
+        layout->addWidget(resultsText);
+        
+        QPushButton* closeButton = new QPushButton("Close", testDialog);
+        layout->addWidget(closeButton);
+        connect(closeButton, &QPushButton::clicked, testDialog, &QDialog::accept);
+        
+        testDialog->show();
+        
+        // Keep track of which IDs work
+        QStringList validIds;
+        
+        // Test each ID
+        for (const QString& id : testIds) {
+            resultsText->append(QString("Testing ID: %1...").arg(id));
+            QApplication::processEvents();
+            
+            // Direct check using employeeExists - avoids triggering motor commands for each test
+            bool exists = arduino->employeeExists(id);
+            if (exists) {
+                validIds.append(id);
+                resultsText->append(QString("<span style='color:green'>ID %1: EXISTS in database</span>").arg(id));
+            } else {
+                resultsText->append(QString("<span style='color:red'>ID %1: NOT found in database</span>").arg(id));
+            }
+            QApplication::processEvents();
+            
+            // Small delay between tests
+            QThread::msleep(200);
+        }
+        
+        // Summary
+        resultsText->append("\n<b>TEST SUMMARY:</b>");
+        if (validIds.isEmpty()) {
+            resultsText->append("<span style='color:red'>No valid employee IDs found.</span>");
+        } else {
+            resultsText->append("<span style='color:green'>Valid employee IDs with access:</span>");
+            for (const QString& id : validIds) {
+                resultsText->append(QString("- %1").arg(id));
+            }
+        }
+        
+        // Keep dialog open for user to review results
+        testDialog->exec();
+    }
+}
+
